@@ -1,158 +1,68 @@
 package com.example.smartfarm;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Button;
-import android.widget.TextView;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import android.widget.EditText;
+import android.widget.Switch;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 
-import androidx.activity.EdgeToEdge;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
-
-import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.data.Entry;
-import com.github.mikephil.charting.data.LineData;
-import com.github.mikephil.charting.data.LineDataSet;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreException;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.QuerySnapshot;
 
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
-
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
-    private LineChart lineChart;
+
+    private EditText etMoisture;
+    private Switch switchWatering;
+    private Button btnSave;
     private FirebaseFirestore db;
-    private ArrayList<Entry> suhuEntries = new ArrayList<>();
-    private MqttClient mqttClient;
-    private static final String BROKER_URL = "tcp://broker.hivemq.com:1883";
-    private static final String CLIENT_ID = "AndroidAppSmartFarm";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        // Inisialisasi Chart
-        lineChart = findViewById(R.id.lineChart);
 
+        // Inisialisasi View
+        etMoisture = findViewById(R.id.etMoisture);
+        switchWatering = findViewById(R.id.switchWatering);
+        btnSave = findViewById(R.id.btnSave);
+
+        // Inisialisasi Firestore
         db = FirebaseFirestore.getInstance();
 
-        bacaDataFirestoreUntukGrafik();
-
-        setupMQTT();
-
-        // Contoh implementasi tombol
-        Button btnPlot1 = findViewById(R.id.btnPlot1);
-        btnPlot1.setOnClickListener(v -> publishMQTT("smartfarm/kontrol/plot1", "ON"));
+        btnSave.setOnClickListener(v -> simpanDataKeFirestore());
     }
 
-    private void bacaDataFirestoreUntukGrafik() {
-        // Mengambil data dari collection "sensor_history"
-        // Diurutkan berdasarkan field "timestamp" dari yang terlama ke terbaru
-        db.collection("sensor_history")
-                .orderBy("timestamp", Query.Direction.ASCENDING)
-                .addSnapshotListener(new EventListener<QuerySnapshot>() {
-                    @Override
-                    public void onEvent(@Nullable QuerySnapshot value,
-                                        @Nullable FirebaseFirestoreException e) {
-                        if (e != null) {
-                            Log.w("Firestore", "Listen failed.", e);
-                            return;
-                        }
+    private void simpanDataKeFirestore() {
+        String moistureStr = etMoisture.getText().toString();
 
-                        suhuEntries.clear();
-                        int xIndex = 0; // Sumbu X untuk grafik
+        if (moistureStr.isEmpty()) {
+            Toast.makeText(this, "Masukkan nilai Soil Moisture", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-                        for (QueryDocumentSnapshot doc : value) {
-                            // Ambil nilai suhu (pastikan tipe data di Firestore adalah Number)
-                            if (doc.get("suhu") != null) {
-                                float suhu = doc.getDouble("suhu").floatValue();
-                                suhuEntries.add(new Entry(xIndex, suhu));
-                                xIndex++;
-                            }
-                        }
+        int soilMoisture = Integer.parseInt(moistureStr);
+        boolean isPumpOn = switchWatering.isChecked();
 
-                        updateGrafik();
-                    }
+        // Siapkan data yang akan dikirim
+        Map<String, Object> farmData = new HashMap<>();
+        farmData.put("soilMoisture", soilMoisture);
+        farmData.put("pompaMenyala", isPumpOn);
+        farmData.put("timestamp", com.google.firebase.firestore.FieldValue.serverTimestamp());
+
+        // Simpan ke collection "kontrol_penyiraman" dengan document ID "status_terkini"
+        // Menggunakan set() agar data selalu di-update di satu dokumen yang sama
+        db.collection("kontrol_penyiraman").document("status_terkini")
+                .set(farmData)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(MainActivity.this, "Data berhasil dikirim ke Firestore!", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(MainActivity.this, "Gagal mengirim data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
-
-    private void updateGrafik() {
-        // Konfigurasi garis grafik
-        LineDataSet dataSetSuhu = new LineDataSet(suhuEntries, "Suhu Udara");
-        dataSetSuhu.setColor(android.graphics.Color.parseColor("#FF8A65"));
-        dataSetSuhu.setDrawCircles(false); // Sesuai gambar, tanpa bulatan titik
-        dataSetSuhu.setLineWidth(2f);
-
-        LineData lineData = new LineData(dataSetSuhu);
-        lineChart.setData(lineData);
-        lineChart.invalidate(); // Refresh chart
-    }
-
-    private void setupMQTT() {
-        TextView tvSuhu = findViewById(R.id.tvSuhu);
-        try {
-            mqttClient = new MqttClient(BROKER_URL, CLIENT_ID, null);
-            MqttConnectOptions options = new MqttConnectOptions();
-            options.setCleanSession(true);
-
-            mqttClient.connect(options);
-
-            mqttClient.setCallback(new MqttCallback() {
-                @Override
-                public void connectionLost(Throwable cause) {}
-
-                @Override
-                public void messageArrived(String topic, MqttMessage message) {
-                    String payload = new String(message.getPayload());
-                    runOnUiThread(() -> {
-                        if(topic.equals("smartfarm/sensor/suhu")){
-                            // Update TextView Suhu
-                            tvSuhu.setText(payload);
-                        }
-                    });
-                }
-
-                @Override
-                public void deliveryComplete(IMqttDeliveryToken token) {}
-            });
-
-            mqttClient.subscribe("smartfarm/sensor/#");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void publishMQTT(String topic, String msg) {
-        try {
-            if (mqttClient != null && mqttClient.isConnected()) {
-                MqttMessage message = new MqttMessage(msg.getBytes());
-                message.setQos(0);
-                mqttClient.publish(topic, message);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 }
-
 

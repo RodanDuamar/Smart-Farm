@@ -1,287 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center"
     tools:context=".MainActivity">
 
-    <LinearLayout
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Smart Farm Controller"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="32dp"/>
+
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:text="Simulasi Soil Moisture (%)" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:baselineAligned="false"
-            android:weightSum="2">
+    <EditText
+        android:id="@+id/etMoisture"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:hint="Contoh: 65"
+        android:layout_marginBottom="24dp"/>
 
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                app:cardBackgroundColor="#FF8A65"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+    <Switch
+        android:id="@+id/switchWatering"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Alat Penyiraman (Pompa)"
+        android:textSize="18sp"
+        android:layout_marginBottom="32dp"/>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center">
+    <Button
+        android:id="@+id/btnSave"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Simpan ke Firestore" />
 
-                    <RelativeLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Suhu Udara" android:textColor="#FFFFFF" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="°C" android:textColor="#FFFFFF" android:layout_alignParentEnd="true"/>
-                    </RelativeLayout>
-                    <TextView
-                        android:id="@+id/tvSuhu"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textSize="36sp"
-                        android:textColor="#FFFFFF"
-                        android:textStyle="bold"
-                        android:layout_marginTop="8dp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dingin" android:textColor="#FFFFFF"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                app:cardBackgroundColor="#AB47BC"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center">
-
-                    <RelativeLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Kel. Udara" android:textColor="#FFFFFF" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="%" android:textColor="#FFFFFF" android:layout_alignParentEnd="true"/>
-                    </RelativeLayout>
-                    <TextView
-                        android:id="@+id/tvKelUdara"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textSize="36sp"
-                        android:textColor="#FFFFFF"
-                        android:textStyle="bold"
-                        android:layout_marginTop="8dp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="normal" android:textColor="#FFFFFF"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="16dp"
-            android:baselineAligned="false"
-            android:weightSum="2">
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                app:cardBackgroundColor="#FF5252"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center">
-
-                    <RelativeLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Kel. Plot 1" android:textColor="#FFFFFF" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="%" android:textColor="#FFFFFF" android:layout_alignParentEnd="true"/>
-                    </RelativeLayout>
-                    <TextView
-                        android:id="@+id/tvKelPlot1"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="100"
-                        android:textSize="36sp"
-                        android:textColor="#FFFFFF"
-                        android:textStyle="bold"
-                        android:layout_marginTop="8dp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tanah kering" android:textColor="#FFFFFF"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                app:cardBackgroundColor="#00E676"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center">
-
-                    <RelativeLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Kel. Plot 2" android:textColor="#FFFFFF" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="%" android:textColor="#FFFFFF" android:layout_alignParentEnd="true"/>
-                    </RelativeLayout>
-                    <TextView
-                        android:id="@+id/tvKelPlot2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="100"
-                        android:textSize="36sp"
-                        android:textColor="#FFFFFF"
-                        android:textStyle="bold"
-                        android:layout_marginTop="8dp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tanah Kering" android:textColor="#FFFFFF"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Grafik Smart Farming"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="#5E35B1"
-                    android:layout_marginBottom="8dp"/>
-
-                <com.github.mikephil.charting.charts.LineChart
-                    android:id="@+id/lineChart"
-                    android:layout_width="match_parent"
-                    android:layout_height="200dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Kontrol Penyiraman"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#424242"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="12dp">
-
-            <RelativeLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Plot 1" android:textStyle="bold" android:textColor="#424242"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Auto OFF" android:layout_alignParentEnd="true" android:textColor="#757575"/>
-            </RelativeLayout>
-
-            <Button
-                android:id="@+id/btnPlot1"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:text="OFF"
-                android:textSize="16sp"
-                android:backgroundTint="#0288D1"
-                app:cornerRadius="4dp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="12dp">
-
-            <RelativeLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Plot 2" android:textStyle="bold" android:textColor="#424242"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Auto OFF" android:layout_alignParentEnd="true" android:textColor="#757575"/>
-            </RelativeLayout>
-
-            <Button
-                android:id="@+id/btnPlot2"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:text="ON"
-                android:textSize="16sp"
-                android:backgroundTint="#0288D1"
-                app:cornerRadius="4dp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="24dp">
-
-            <RelativeLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Lampu" android:textStyle="bold" android:textColor="#424242"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Auto OFF" android:layout_alignParentEnd="true" android:textColor="#757575"/>
-            </RelativeLayout>
-
-            <Button
-                android:id="@+id/btnLampu"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:text="ON"
-                android:textSize="16sp"
-                android:backgroundTint="#0288D1"
-                app:cornerRadius="4dp" />
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Detail Data Kumulatif"
-            android:textColor="#757575"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btnDetail"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="DETAIL"
-            android:textSize="16sp"
-            android:backgroundTint="#0288D1"
-            app:cornerRadius="4dp"
-            android:layout_marginBottom="24dp"/>
-
-    </LinearLayout>
-
-</androidx.core.widget.NestedScrollView>
+</LinearLayout>
