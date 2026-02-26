@@ -5,6 +5,7 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import androidx.activity.EdgeToEdge;
@@ -17,12 +18,15 @@ import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.database.annotations.Nullable;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
@@ -37,6 +41,8 @@ import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private LineChart lineChart;
@@ -62,6 +68,38 @@ public class MainActivity extends AppCompatActivity {
         // Contoh implementasi tombol
         Button btnPlot1 = findViewById(R.id.btnPlot1);
         btnPlot1.setOnClickListener(v -> publishMQTT("smartfarm/kontrol/plot1", "ON"));
+
+        // Contoh: Kita gunakan tombol "Detail" untuk memicu pengujian sementara
+        Button btnDetail = findViewById(R.id.btnDetail);
+        btnDetail.setOnClickListener(v -> kirimDataDummyKeFirestore());
+    }
+
+    private void kirimDataDummyKeFirestore() {
+        // Membuat data suhu dan kelembaban acak untuk simulasi
+        float suhuAcak = (float) (Math.random() * (35 - 25) + 25); // Rentang 25 - 35 derajat
+        float kelAcak = (float) (Math.random() * (90 - 50) + 50);  // Rentang 50 - 90 %
+
+        // Membungkus data dalam HashMap (format yang diterima Firestore)
+        Map<String, Object> sensorData = new HashMap<>();
+        sensorData.put("suhu", suhuAcak);
+        sensorData.put("kelembaban", kelAcak);
+        sensorData.put("timestamp", System.currentTimeMillis()); // Waktu saat ini untuk sumbu X
+
+        // Mengirim data ke koleksi "sensor_history"
+        db.collection("sensor_history")
+                .add(sensorData)
+                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                    @Override
+                    public void onSuccess(DocumentReference documentReference) {
+                        Log.d("TEST_FIRESTORE", "Data dummy berhasil masuk dengan ID: " + documentReference.getId());
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w("TEST_FIRESTORE", "Gagal mengirim data", e);
+                    }
+                });
     }
 
     private void bacaDataFirestoreUntukGrafik() {
