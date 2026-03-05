@@ -1,5 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- Primary Colors - Agriculture Green Theme -->
+    <color name="primary">#1B5E20</color>
+    <color name="primary_light">#4C8C4A</color>
+    <color name="primary_dark">#003300</color>
+    <color name="primary_variant">#2E7D32</color>
+
+    <!-- Secondary Colors - Teal Accent -->
+    <color name="secondary">#00897B</color>
+    <color name="secondary_light">#4DB6AC</color>
+    <color name="secondary_dark">#005B4F</color>
+    <color name="secondary_variant">#00695C</color>
+
+    <!-- Tertiary Colors -->
+    <color name="tertiary">#0277BD</color>
+    <color name="tertiary_light">#58A5F0</color>
+
+    <!-- Surface Colors -->
+    <color name="surface">#F5F9F5</color>
+    <color name="surface_dark">#1A1C1A</color>
+    <color name="surface_card">#FFFFFF</color>
+    <color name="surface_card_dark">#2D2F2D</color>
+    <color name="background">#F1F8E9</color>
+    <color name="background_dark">#121412</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#1B1F1B</color>
+    <color name="text_secondary">#44474E</color>
+    <color name="text_on_primary">#FFFFFF</color>
+    <color name="text_hint">#9E9E9E</color>
+    <color name="text_disabled">#BDBDBD</color>
+
+    <!-- Status Colors -->
+    <color name="status_good">#4CAF50</color>
+    <color name="status_good_light">#C8E6C9</color>
+    <color name="status_warning">#FF9800</color>
+    <color name="status_warning_light">#FFE0B2</color>
+    <color name="status_danger">#F44336</color>
+    <color name="status_danger_light">#FFCDD2</color>
+    <color name="status_info">#2196F3</color>
+    <color name="status_info_light">#BBDEFB</color>
+
+    <!-- Pump Colors -->
+    <color name="pump_water">#1976D2</color>
+    <color name="pump_water_light">#BBDEFB</color>
+    <color name="pump_water_bg">#E3F2FD</color>
+    <color name="pump_fertilizer">#388E3C</color>
+    <color name="pump_fertilizer_light">#C8E6C9</color>
+    <color name="pump_fertilizer_bg">#E8F5E9</color>
+    <color name="pump_insecticide">#F57C00</color>
+    <color name="pump_insecticide_light">#FFE0B2</color>
+    <color name="pump_insecticide_bg">#FFF3E0</color>
+
+    <!-- Sensor Colors -->
+    <color name="sensor_moisture">#0288D1</color>
+    <color name="sensor_moisture_bg">#E1F5FE</color>
+    <color name="sensor_nitrogen">#2E7D32</color>
+    <color name="sensor_nitrogen_bg">#E8F5E9</color>
+    <color name="sensor_phosphorus">#7B1FA2</color>
+    <color name="sensor_phosphorus_bg">#F3E5F5</color>
+    <color name="sensor_potassium">#E64A19</color>
+    <color name="sensor_potassium_bg">#FBE9E7</color>
+    <color name="sensor_ph">#00838F</color>
+    <color name="sensor_ph_bg">#E0F7FA</color>
+
+    <!-- Gauge Colors -->
+    <color name="gauge_bg">#E0E0E0</color>
+    <color name="gauge_bg_dark">#424242</color>
+
+    <!-- Misc -->
+    <color name="divider">#E0E0E0</color>
+    <color name="ripple">#1A1B5E20</color>
+    <color name="shadow">#1A000000</color>
+    <color name="overlay">#80000000</color>
+    <color name="switch_track_off">#B0BEC5</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="transparent">#00000000</color>
 </resources>
