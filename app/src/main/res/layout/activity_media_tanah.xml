@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F5F9F5"
-    tools:context=".MainActivity">
+    tools:context=".mediatanah.MediaTanahActivity">
 
     <LinearLayout
         android:layout_width="match_parent"

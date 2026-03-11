@@ -1,25 +1,22 @@
-package com.example.smartfarm;
+package com.example.smartfarm.mediatanah;
 
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.smartfarm.R;
+import com.example.smartfarm.base.BaseSmartFarmActivity;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
+/**
+ * Activity untuk monitoring dan kontrol sistem irigasi Media Tanah.
+ * Menampilkan sensor kelembapan, pH tanah, dan valve kontrol.
+ * Extends BaseSmartFarmActivity untuk reuse MQTT logic.
+ */
+public class MediaTanahActivity extends BaseSmartFarmActivity {
 
-public class MainActivity extends AppCompatActivity {
-
-    private MqttClient mqttClient;
-    private static final String BROKER_URL = "tcp://broker.hivemq.com:1883";
-    private static final String CLIENT_ID = "AndroidAppSmartFarm";
+    private static final String TAG = "MediaTanah";
 
     // Sensor views
     private TextView tvKelembapan, tvPH, tvStatusKelembapan, tvStatusPH;
@@ -31,9 +28,37 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_media_tanah);
 
-        // Initialize sensor views
+        initViews();
+        setupSwitchListeners();
+        setupMQTT();
+    }
+
+    @Override
+    protected String getClientId() {
+        return "AndroidSmartFarm_MediaTanah";
+    }
+
+    @Override
+    protected String getSubscriptionTopic() {
+        return "smartfarm/sensor/#";
+    }
+
+    @Override
+    protected void onMqttMessageReceived(String topic, String payload) {
+        switch (topic) {
+            case "smartfarm/sensor/kelembapan":
+                updateKelembapan(payload);
+                break;
+            case "smartfarm/sensor/ph":
+                updatePH(payload);
+                break;
+        }
+    }
+
+    private void initViews() {
+        // Sensor views
         tvKelembapan = findViewById(R.id.tvKelembapan);
         tvPH = findViewById(R.id.tvPH);
         tvStatusKelembapan = findViewById(R.id.tvStatusKelembapan);
@@ -41,12 +66,13 @@ public class MainActivity extends AppCompatActivity {
         progressKelembapan = findViewById(R.id.progressKelembapan);
         progressPH = findViewById(R.id.progressPH);
 
-        // Initialize switches
+        // Switch views
         switchKranAir = findViewById(R.id.switchKranAir);
         switchKranInsektisida = findViewById(R.id.switchKranInsektisida);
         switchKranPupuk = findViewById(R.id.switchKranPupuk);
+    }
 
-        // Setup switch listeners
+    private void setupSwitchListeners() {
         switchKranAir.setOnCheckedChangeListener((buttonView, isChecked) -> {
             publishMQTT("smartfarm/kontrol/kran_air", isChecked ? "ON" : "OFF");
         });
@@ -58,49 +84,6 @@ public class MainActivity extends AppCompatActivity {
         switchKranPupuk.setOnCheckedChangeListener((buttonView, isChecked) -> {
             publishMQTT("smartfarm/kontrol/kran_pupuk", isChecked ? "ON" : "OFF");
         });
-
-        // Setup MQTT
-        setupMQTT();
-    }
-
-    private void setupMQTT() {
-        try {
-            mqttClient = new MqttClient(BROKER_URL, CLIENT_ID, null);
-            MqttConnectOptions options = new MqttConnectOptions();
-            options.setCleanSession(true);
-
-            mqttClient.connect(options);
-
-            mqttClient.setCallback(new MqttCallback() {
-                @Override
-                public void connectionLost(Throwable cause) {
-                }
-
-                @Override
-                public void messageArrived(String topic, MqttMessage message) {
-                    String payload = new String(message.getPayload());
-                    runOnUiThread(() -> {
-                        switch (topic) {
-                            case "smartfarm/sensor/kelembapan":
-                                updateKelembapan(payload);
-                                break;
-                            case "smartfarm/sensor/ph":
-                                updatePH(payload);
-                                break;
-                        }
-                    });
-                }
-
-                @Override
-                public void deliveryComplete(IMqttDeliveryToken token) {
-                }
-            });
-
-            mqttClient.subscribe("smartfarm/sensor/#");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     private void updateKelembapan(String value) {
@@ -110,7 +93,6 @@ public class MainActivity extends AppCompatActivity {
             tvKelembapan.setText(String.valueOf(kelInt));
             progressKelembapan.setProgress(kelInt);
 
-            // Update status
             if (kelembapan >= 40 && kelembapan <= 80) {
                 tvStatusKelembapan.setText("Optimal");
                 tvStatusKelembapan.setTextColor(getColor(R.color.status_good));
@@ -122,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
                 tvStatusKelembapan.setTextColor(getColor(R.color.status_warning));
             }
         } catch (NumberFormatException e) {
-            Log.e("MainActivity", "Invalid kelembapan value: " + value);
+            Log.e(TAG, "Invalid kelembapan value: " + value);
         }
     }
 
@@ -130,10 +112,8 @@ public class MainActivity extends AppCompatActivity {
         try {
             float ph = Float.parseFloat(value);
             tvPH.setText(String.valueOf(ph));
-            // pH scale 0-14, progress max is 140 (for decimal precision)
             progressPH.setProgress(Math.round(ph * 10));
 
-            // Update status
             if (ph >= 5.5 && ph <= 7.5) {
                 tvStatusPH.setText("Optimal");
                 tvStatusPH.setTextColor(getColor(R.color.status_good));
@@ -145,19 +125,7 @@ public class MainActivity extends AppCompatActivity {
                 tvStatusPH.setTextColor(getColor(R.color.status_warning));
             }
         } catch (NumberFormatException e) {
-            Log.e("MainActivity", "Invalid pH value: " + value);
-        }
-    }
-
-    private void publishMQTT(String topic, String msg) {
-        try {
-            if (mqttClient != null && mqttClient.isConnected()) {
-                MqttMessage message = new MqttMessage(msg.getBytes());
-                message.setQos(0);
-                mqttClient.publish(topic, message);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Invalid pH value: " + value);
         }
     }
 }
