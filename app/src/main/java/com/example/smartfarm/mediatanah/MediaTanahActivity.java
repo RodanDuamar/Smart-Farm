@@ -30,9 +30,9 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_media_tanah);
 
+        setupMQTT();
         initViews();
         setupSwitchListeners();
-        setupMQTT();
     }
 
     @Override

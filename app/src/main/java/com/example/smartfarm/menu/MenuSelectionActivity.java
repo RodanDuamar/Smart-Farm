@@ -28,6 +28,16 @@ public class MenuSelectionActivity extends AppCompatActivity {
         setupListeners();
     }
 
+    /**
+     * Navigasi ke Activity target.
+     *
+     * @param targetActivity class Activity tujuan
+     */
+    private void navigateTo(Class<?> targetActivity) {
+        Intent intent = new Intent(this, targetActivity);
+        startActivity(intent);
+    }
+
     private void initViews() {
         cardHidroponik = findViewById(R.id.cardHidroponik);
         cardMediaTanah = findViewById(R.id.cardMediaTanah);
@@ -43,13 +53,4 @@ public class MenuSelectionActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Navigasi ke Activity target.
-     * 
-     * @param targetActivity class Activity tujuan
-     */
-    private void navigateTo(Class<?> targetActivity) {
-        Intent intent = new Intent(this, targetActivity);
-        startActivity(intent);
-    }
 }
