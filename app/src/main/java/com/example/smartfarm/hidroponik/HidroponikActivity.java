@@ -2,6 +2,8 @@ package com.example.smartfarm.hidroponik;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import com.example.smartfarm.R;
 import com.example.smartfarm.base.BaseSmartFarmActivity;
@@ -14,6 +16,10 @@ import com.example.smartfarm.base.BaseSmartFarmActivity;
 public class HidroponikActivity extends BaseSmartFarmActivity {
 
     private static final String TAG = "Hidroponik";
+
+    private TextView tvNutrisiAir, tvLarutan , tvStatusNutrisiAir, tvStatusLarutan;
+    private ProgressBar progressNutrisiAir, progressLarutan;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
