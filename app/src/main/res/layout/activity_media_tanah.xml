@@ -418,7 +418,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Valve Input Cairan"
+                            android:text="Valve Input"
                             android:textSize="16sp"
                             android:textStyle="bold"
                             android:textColor="#1B1F1B"
@@ -458,13 +458,13 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight=" 1"
-                            android:text="Kran Air"
+                            android:text="Pompa"
                             android:textSize="15sp"
                             android:textColor="#424242"
                             android:layout_marginStart="12dp" />
 
                         <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchKranAir"
+                            android:id="@+id/switchPompa"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content" />
                     </LinearLayout>
@@ -495,13 +495,13 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Kran Insektisida"
+                            android:text="Valve 1"
                             android:textSize="15sp"
                             android:textColor="#424242"
                             android:layout_marginStart="12dp" />
 
                         <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchKranInsektisida"
+                            android:id="@+id/switchValve1"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content" />
                     </LinearLayout>
@@ -518,32 +518,32 @@
                         <FrameLayout
                             android:layout_width="40dp"
                             android:layout_height="40dp"
-                            android:background="@drawable/bg_icon_circle_green_small">
+                            android:background="@drawable/bg_icon_circle_orange">
 
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
                                 android:layout_gravity="center"
-                                android:src="@drawable/ic_fertilizer"
-                                android:contentDescription="Fertilizer Icon" />
+                                android:src="@drawable/ic_add_circle"
+                                android:contentDescription="Insecticide Icon" />
                         </FrameLayout>
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Kran Pupuk"
+                            android:text="Valve 2"
                             android:textSize="15sp"
                             android:textColor="#424242"
                             android:layout_marginStart="12dp" />
 
                         <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchKranPupuk"
+                            android:id="@+id/switchValve2"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content" />
                     </LinearLayout>
 
-                    <!-- ====== Kran Daya Row ====== -->
+                    <!-- ====== Kran Insektisida Row ====== -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -555,27 +555,64 @@
                         <FrameLayout
                             android:layout_width="40dp"
                             android:layout_height="40dp"
-                            android:background="@drawable/bg_icon_circle_blue">
+                            android:background="@drawable/bg_icon_circle_orange">
 
                             <ImageView
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
                                 android:layout_gravity="center"
-                                android:src="@android:drawable/ic_lock_power_off"
-                                android:contentDescription="Power Icon" />
+                                android:src="@drawable/ic_add_circle"
+                                android:contentDescription="Insecticide Icon" />
                         </FrameLayout>
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Daya"
+                            android:text="Valve 3"
                             android:textSize="15sp"
                             android:textColor="#424242"
                             android:layout_marginStart="12dp" />
 
                         <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchDaya"
+                            android:id="@+id/switchValve3"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+
+                    <!-- ====== Kran Pupuk Row ====== -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingTop="12dp"
+                        android:paddingBottom="12dp">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_icon_circle_orange">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_add_circle"
+                                android:contentDescription="Insecticide Icon" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Valve 4"
+                            android:textSize="15sp"
+                            android:textColor="#424242"
+                            android:layout_marginStart="12dp" />
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchValve4"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content" />
                     </LinearLayout>
