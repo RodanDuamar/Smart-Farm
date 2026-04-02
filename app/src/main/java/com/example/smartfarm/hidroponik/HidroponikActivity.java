@@ -18,8 +18,8 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
 
     private static final String TAG = "Hidroponik";
 
-    private TextView tvNutrisiAir, tvLarutan , tvStatusNutrisiAir, tvStatusLarutan;
-    private ProgressBar progressNutrisiAir, progressLarutan;
+    private TextView tvNutrisiAir, tvPhAir, tvStatusPhAir, tvStatusNutrisiAir;
+    private ProgressBar progressPhAir, progressNutrisiAir, progressVitaminA, progressVitaminB;
     private MaterialSwitch switchNutrisiAir, switchLarutan;
 
 
@@ -51,24 +51,25 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
                 updateNutrisiAir(payload);
                 break;
             case "smartfarm/hidroponik/larutan":
-                updateLarutan(payload);
+                updatePhAir(payload);
                 break;
             default:
                 Log.w(TAG, "Unknown topic: " + topic);
                 break;
-
         }
     }
 
     private void initViews() {
+        tvPhAir = findViewById(R.id.tvPhAir);
         tvNutrisiAir = findViewById(R.id.tvNutrisiAir);
-        tvLarutan = findViewById(R.id.tvLarutan);
-        tvStatusNutrisiAir = findViewById(R.id.tvStatusNutrisiAir);
-        tvStatusLarutan = findViewById(R.id.tvStatusLarutan);
+        progressPhAir = findViewById(R.id.progressPhAir);
         progressNutrisiAir = findViewById(R.id.progressNutrisiAir);
-        progressLarutan = findViewById(R.id.progressLarutan);
-        switchNutrisiAir = findViewById(R.id.switchPompaNutrisi);
-        switchLarutan = findViewById(R.id.switchPompaAir);
+        tvStatusPhAir = findViewById(R.id.tvStatusPhAir);
+        tvStatusNutrisiAir = findViewById(R.id.tvStatusNutrisiAir);
+
+//        progressVitaminA = findViewById(R.id.progressVitaminA);
+//        progressVitaminB = findViewById(R.id.progressVitaminB);
+
     }
 
     private void setupSwitchListeners() {
@@ -83,28 +84,23 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
         }
 
 
-
-
-
-
-
-    private void updateLarutan(String payload) {
+    private void updatePhAir(String payload) {
         try {
             float pH = Float.parseFloat(payload);
-            tvLarutan.setText(String.valueOf(pH));
-            progressLarutan.setProgress(Math.round(pH * 10));
-            if (pH >= 5.5 && pH <= 7.5) {
-                tvStatusLarutan.setText("Optimal");
-                tvStatusLarutan.setTextColor(getColor(R.color.status_good));
+            tvPhAir.setText(String.valueOf(pH));
+            progressVitaminA.setProgress(Math.round(pH * 10));
+            if (pH >= 5.5 && pH <= 6.5) {
+                tvStatusPhAir.setText("Ideal");
+                tvStatusPhAir.setTextColor(getColor(R.color.status_good));
             } else if (pH < 5.5) {
-                tvStatusLarutan.setText("Asam");
-                tvStatusLarutan.setTextColor(getColor(R.color.status_danger));
+                tvStatusPhAir.setText("Asam");
+                tvStatusPhAir.setTextColor(getColor(R.color.status_danger));
             } else {
-                tvStatusLarutan.setText("Basa");
-                tvStatusLarutan.setTextColor(getColor(R.color.status_warning));
+                tvStatusPhAir.setText("Basa");
+                tvStatusPhAir.setTextColor(getColor(R.color.status_warning));
             }
         } catch (NumberFormatException e) {
-            Log.e(TAG, "Invalid pH value: " + payload);
+            Log.e(TAG, "Invalid pH Air value: " + payload);
 
         }
     }
@@ -115,18 +111,18 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
             tvNutrisiAir.setText(String.valueOf(pH));
             progressNutrisiAir.setProgress(Math.round(pH * 10));
 
-            if (pH >= 5.5 && pH <= 7.5) {
-                tvStatusNutrisiAir.setText("Optimal");
+            if (pH >= 800 && pH <= 1500) {
+                tvStatusNutrisiAir.setText("Ideal");
                 tvStatusNutrisiAir.setTextColor(getColor(R.color.status_good));
-            } else if (pH < 5.5) {
-                tvStatusNutrisiAir.setText("Asam");
+            } else if (pH < 800) {
+                tvStatusNutrisiAir.setText("Kurang Nutrisi");
                 tvStatusNutrisiAir.setTextColor(getColor(R.color.status_danger));
             } else {
-                tvStatusNutrisiAir.setText("Basa");
+                tvStatusNutrisiAir.setText("Berlebihan Nutrisi");
                 tvStatusNutrisiAir.setTextColor(getColor(R.color.status_warning));
             }
         } catch (NumberFormatException e) {
-            Log.e(TAG, "Invalid pH value: " + payload);
+            Log.e(TAG, "Invalid Nutrisi value: " + payload);
         }
 
     }

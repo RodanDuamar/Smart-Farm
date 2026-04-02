@@ -23,7 +23,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
     private ProgressBar progressKelembapan, progressPH;
 
     // Switch views
-    private MaterialSwitch switchKranAir, switchKranInsektisida, switchKranPupuk, switchDaya, switchKranPembuangan, switchSumberDaya;
+    private MaterialSwitch switchKranAir, switchKranInsektisida, switchKranPupuk, switchKranPembuangan, switchSumberDaya;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,10 +67,9 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
         progressPH = findViewById(R.id.progressPH);
 
         // Switch views
-        switchKranAir = findViewById(R.id.switchKranAir);
-        switchKranInsektisida = findViewById(R.id.switchKranInsektisida);
-        switchKranPupuk = findViewById(R.id.switchKranPupuk);
-        switchDaya = findViewById(R.id.switchDaya);
+        switchKranAir = findViewById(R.id.switchPompa);
+        switchKranInsektisida = findViewById(R.id.switchValve1);
+        switchKranPupuk = findViewById(R.id.switchValve2);
         switchKranPembuangan = findViewById(R.id.switchKranPembuangan);
         switchSumberDaya = findViewById(R.id.switchSumberDaya);
     }
@@ -86,10 +85,6 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
 
         switchKranPupuk.setOnCheckedChangeListener((buttonView, isChecked) -> {
             publishMQTT("smartfarm/kontrol/kran_pupuk", isChecked ? "ON" : "OFF");
-        });
-
-        switchDaya.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            publishMQTT("smartfarm/kontrol/daya_sistem", isChecked ? "ON" : "OFF");
         });
 
         switchKranPembuangan.setOnCheckedChangeListener((buttonView, isChecked) -> {
