@@ -520,7 +520,7 @@
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
                                 android:layout_gravity="center"
-                                android:src="@android:drawable/presence_invisible"
+                                android:src="@android:drawable/ic_menu_delete"
                                 android:contentDescription="Waste Icon" />
                         </FrameLayout>
 
