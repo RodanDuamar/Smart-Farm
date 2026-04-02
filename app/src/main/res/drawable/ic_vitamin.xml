@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Pill/capsule shape for vitamin -->
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M4.22,11.29L11.29,4.22C12.07,3.44 13.34,3.44 14.12,4.22L19.78,9.88C20.56,10.66 20.56,11.93 19.78,12.71L12.71,19.78C11.93,20.56 10.66,20.56 9.88,19.78L4.22,14.12C3.44,13.34 3.44,12.07 4.22,11.29Z" />
+    <path
+        android:fillColor="#F57C00"
+        android:pathData="M12,12L19.78,12.71C20.56,11.93 20.56,10.66 19.78,9.88L14.12,4.22C13.34,3.44 12.07,3.44 11.29,4.22L12,12Z" />
+</vector>
