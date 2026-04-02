@@ -135,19 +135,4 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
 
 
 
-            @Override
-    protected String getClientId() {
-        return "AndroidSmartFarm_Hidroponik";
-    }
 
-    @Override
-    protected String getSubscriptionTopic() {
-        return "smartfarm/hidroponik/#";
-    }
-
-    @Override
-    protected void onMqttMessageReceived(String topic, String payload) {
-        // TODO: Implement saat fitur hidroponik sudah dikembangkan
-        Log.d(TAG, "Message received - topic: " + topic + ", payload: " + payload);
-    }
-}
