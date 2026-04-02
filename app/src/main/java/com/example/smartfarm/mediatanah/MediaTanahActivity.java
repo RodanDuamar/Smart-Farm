@@ -23,7 +23,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
     private ProgressBar progressKelembapan, progressPH;
 
     // Switch views
-    private MaterialSwitch switchKranAir, switchKranInsektisida, switchKranPupuk;
+    private MaterialSwitch switchKranAir, switchKranInsektisida, switchKranPupuk, switchDaya, switchKranPembuangan ;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,6 +70,8 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
         switchKranAir = findViewById(R.id.switchKranAir);
         switchKranInsektisida = findViewById(R.id.switchKranInsektisida);
         switchKranPupuk = findViewById(R.id.switchKranPupuk);
+        switchDaya = findViewById(R.id.switchDaya);
+        switchKranPembuangan = findViewById(R.id.switchKranPembuangan);
     }
 
     private void setupSwitchListeners() {
