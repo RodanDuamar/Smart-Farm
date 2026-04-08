@@ -20,7 +20,7 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
 
     private TextView tvNutrisiAir, tvPhAir, tvStatusPhAir, tvStatusNutrisiAir;
     private ProgressBar progressPhAir, progressNutrisiAir, progressVitaminA, progressVitaminB;
-    private MaterialSwitch switchNutrisiAir, switchLarutan;
+//    private MaterialSwitch switchNutrisiAir, switchLarutan;
 
 
 
@@ -31,7 +31,7 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
 
         setupMQTT();
         initViews();
-        setupSwitchListeners();
+//        setupSwitchListeners();
     }
 
     @Override
@@ -72,16 +72,15 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
 
     }
 
-    private void setupSwitchListeners() {
-        switchNutrisiAir.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            publishMQTT("smartfarm/kontrol/nutrisi_air", isChecked ? "ON" : "OFF");
-        });
-
-        switchLarutan.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            publishMQTT("smartfarm/kontrol/larutan", isChecked ? "ON" : "OFF");
-        });
-
-        }
+//    private void setupSwitchListeners() {
+//        switchNutrisiAir.setOnCheckedChangeListener((buttonView, isChecked) -> {
+//            publishMQTT("smartfarm/kontrol/nutrisi_air", isChecked ? "ON" : "OFF");
+//        });
+//
+//        switchLarutan.setOnCheckedChangeListener((buttonView, isChecked) -> {
+//            publishMQTT("smartfarm/kontrol/larutan", isChecked ? "ON" : "OFF");
+//        });
+//    }
 
 
     private void updatePhAir(String payload) {

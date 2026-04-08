@@ -106,7 +106,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
             progressKelembapan.setProgress(kelInt);
 
             if (kelembapan >= 40 && kelembapan <= 80) {
-                tvStatusKelembapan.setText("Optimal");
+                tvStatusKelembapan.setText("Ideal");
                 tvStatusKelembapan.setTextColor(getColor(R.color.status_good));
             } else if (kelembapan < 40) {
                 tvStatusKelembapan.setText("Kering");
@@ -127,7 +127,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
             progressPH.setProgress(Math.round(ph * 10));
 
             if (ph >= 5.5 && ph <= 7.5) {
-                tvStatusPH.setText("Optimal");
+                tvStatusPH.setText("Ideal");
                 tvStatusPH.setTextColor(getColor(R.color.status_good));
             } else if (ph < 5.5) {
                 tvStatusPH.setText("Asam");
