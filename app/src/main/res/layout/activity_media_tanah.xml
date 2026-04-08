@@ -394,7 +394,7 @@
                 app:cardBackgroundColor="#FFFFFF"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="12dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -432,189 +432,338 @@
                         android:background="#F0F0F0"
                         android:layout_marginBottom="8dp" />
 
-                    <!-- ====== Kran Air Row ====== -->
+                    <!-- ====== Pompa Row ====== -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
+                        android:orientation="vertical"
                         android:paddingTop="12dp"
                         android:paddingBottom="12dp">
 
-                        <FrameLayout
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="@drawable/bg_icon_circle_blue">
-
-                            <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_water_drop_blue"
-                                android:contentDescription="Water Icon" />
-                        </FrameLayout>
-
-                        <TextView
-                            android:layout_width="0dp"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight=" 1"
-                            android:text="Pompa"
-                            android:textSize="15sp"
-                            android:textColor="#424242"
-                            android:layout_marginStart="12dp" />
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
 
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchPompa"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            <FrameLayout
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_icon_circle_blue">
+
+                                <ImageView
+                                    android:layout_width="20dp"
+                                    android:layout_height="20dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_water_drop_blue"
+                                    android:contentDescription="Water Icon" />
+                            </FrameLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Pompa"
+                                    android:textSize="15sp"
+                                    android:textColor="#424242" />
+
+                                <TextView
+                                    android:id="@+id/tvPompaStatus"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Manual"
+                                    android:textSize="11sp"
+                                    android:textColor="#9E9E9E"
+                                    android:layout_marginTop="2dp" />
+                            </LinearLayout>
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/switchPompa"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+                        </LinearLayout>
                     </LinearLayout>
 
-                    <!-- ====== Kran Insektisida Row ====== -->
+                    <!-- ====== Valve 1 Row ====== -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingTop="12dp"
-                        android:paddingBottom="12dp">
+                        android:orientation="vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp">
 
-                        <FrameLayout
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="@drawable/bg_icon_circle_orange">
-
-                            <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_add_circle"
-                                android:contentDescription="Insecticide Icon" />
-                        </FrameLayout>
-
-                        <TextView
-                            android:layout_width="0dp"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Valve 1"
-                            android:textSize="15sp"
-                            android:textColor="#424242"
-                            android:layout_marginStart="12dp" />
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
 
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchValve1"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            <FrameLayout
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_icon_circle_orange">
+
+                                <ImageView
+                                    android:layout_width="20dp"
+                                    android:layout_height="20dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_add_circle"
+                                    android:contentDescription="Valve 1 Icon" />
+                            </FrameLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Valve 1"
+                                    android:textSize="15sp"
+                                    android:textColor="#424242" />
+
+                                <TextView
+                                    android:id="@+id/tvCountdownValve1"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Tidak dijadwalkan"
+                                    android:textSize="11sp"
+                                    android:textColor="#9E9E9E"
+                                    android:layout_marginTop="2dp" />
+                            </LinearLayout>
+
+                            <!-- Timer Button -->
+                            <ImageView
+                                android:id="@+id/btnTimerValve1"
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_timer"
+                                android:background="@drawable/bg_icon_circle_green"
+                                android:contentDescription="Set Timer Valve 1"
+                                android:layout_marginEnd="8dp" />
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/switchValve1"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+                        </LinearLayout>
                     </LinearLayout>
 
-                    <!-- ====== Kran Pupuk Row ====== -->
+                    <!-- ====== Valve 2 Row ====== -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingTop="12dp"
-                        android:paddingBottom="12dp">
+                        android:orientation="vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp">
 
-                        <FrameLayout
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="@drawable/bg_icon_circle_orange">
-
-                            <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_add_circle"
-                                android:contentDescription="Insecticide Icon" />
-                        </FrameLayout>
-
-                        <TextView
-                            android:layout_width="0dp"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Valve 2"
-                            android:textSize="15sp"
-                            android:textColor="#424242"
-                            android:layout_marginStart="12dp" />
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
 
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchValve2"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            <FrameLayout
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_icon_circle_orange">
+
+                                <ImageView
+                                    android:layout_width="20dp"
+                                    android:layout_height="20dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_add_circle"
+                                    android:contentDescription="Valve 2 Icon" />
+                            </FrameLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Valve 2"
+                                    android:textSize="15sp"
+                                    android:textColor="#424242" />
+
+                                <TextView
+                                    android:id="@+id/tvCountdownValve2"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Tidak dijadwalkan"
+                                    android:textSize="11sp"
+                                    android:textColor="#9E9E9E"
+                                    android:layout_marginTop="2dp" />
+                            </LinearLayout>
+
+                            <!-- Timer Button -->
+                            <ImageView
+                                android:id="@+id/btnTimerValve2"
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_timer"
+                                android:background="@drawable/bg_icon_circle_green"
+                                android:contentDescription="Set Timer Valve 2"
+                                android:layout_marginEnd="8dp" />
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/switchValve2"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+                        </LinearLayout>
                     </LinearLayout>
 
-                    <!-- ====== Kran Insektisida Row ====== -->
+                    <!-- ====== Valve 3 Row ====== -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingTop="12dp"
-                        android:paddingBottom="12dp">
+                        android:orientation="vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp">
 
-                        <FrameLayout
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="@drawable/bg_icon_circle_orange">
-
-                            <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_add_circle"
-                                android:contentDescription="Insecticide Icon" />
-                        </FrameLayout>
-
-                        <TextView
-                            android:layout_width="0dp"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Valve 3"
-                            android:textSize="15sp"
-                            android:textColor="#424242"
-                            android:layout_marginStart="12dp" />
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
 
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchValve3"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            <FrameLayout
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_icon_circle_orange">
+
+                                <ImageView
+                                    android:layout_width="20dp"
+                                    android:layout_height="20dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_add_circle"
+                                    android:contentDescription="Valve 3 Icon" />
+                            </FrameLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Valve 3"
+                                    android:textSize="15sp"
+                                    android:textColor="#424242" />
+
+                                <TextView
+                                    android:id="@+id/tvCountdownValve3"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Tidak dijadwalkan"
+                                    android:textSize="11sp"
+                                    android:textColor="#9E9E9E"
+                                    android:layout_marginTop="2dp" />
+                            </LinearLayout>
+
+                            <!-- Timer Button -->
+                            <ImageView
+                                android:id="@+id/btnTimerValve3"
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_timer"
+                                android:background="@drawable/bg_icon_circle_green"
+                                android:contentDescription="Set Timer Valve 3"
+                                android:layout_marginEnd="8dp" />
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/switchValve3"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+                        </LinearLayout>
                     </LinearLayout>
 
-                    <!-- ====== Kran Pupuk Row ====== -->
+                    <!-- ====== Valve 4 Row ====== -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingTop="12dp"
-                        android:paddingBottom="12dp">
+                        android:orientation="vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp">
 
-                        <FrameLayout
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="@drawable/bg_icon_circle_orange">
-
-                            <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_add_circle"
-                                android:contentDescription="Insecticide Icon" />
-                        </FrameLayout>
-
-                        <TextView
-                            android:layout_width="0dp"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Valve 4"
-                            android:textSize="15sp"
-                            android:textColor="#424242"
-                            android:layout_marginStart="12dp" />
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
 
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switchValve4"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            <FrameLayout
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_icon_circle_orange">
+
+                                <ImageView
+                                    android:layout_width="20dp"
+                                    android:layout_height="20dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_add_circle"
+                                    android:contentDescription="Valve 4 Icon" />
+                            </FrameLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Valve 4"
+                                    android:textSize="15sp"
+                                    android:textColor="#424242" />
+
+                                <TextView
+                                    android:id="@+id/tvCountdownValve4"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Tidak dijadwalkan"
+                                    android:textSize="11sp"
+                                    android:textColor="#9E9E9E"
+                                    android:layout_marginTop="2dp" />
+                            </LinearLayout>
+
+                            <!-- Timer Button -->
+                            <ImageView
+                                android:id="@+id/btnTimerValve4"
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_timer"
+                                android:background="@drawable/bg_icon_circle_green"
+                                android:contentDescription="Set Timer Valve 4"
+                                android:layout_marginEnd="8dp" />
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/switchValve4"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+                        </LinearLayout>
                     </LinearLayout>
 
                     <!-- ====== Kran Pembuangan Row ====== -->
@@ -657,8 +806,253 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- ============ CARD: Status Jadwal Aktif ============ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardJadwalStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                android:layout_marginBottom="24dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- Card Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <FrameLayout
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_icon_circle_blue">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_timer"
+                                android:contentDescription="Timer Icon" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="⏱ Jadwal Aktif"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="#1B1F1B"
+                            android:layout_marginStart="10dp" />
+
+                        <TextView
+                            android:id="@+id/btnStopAllTimers"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Hentikan Semua"
+                            android:textSize="12sp"
+                            android:textColor="#F44336"
+                            android:textStyle="bold"
+                            android:padding="8dp"
+                            android:background="?attr/selectableItemBackgroundBorderless" />
+                    </LinearLayout>
+
+                    <!-- Divider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#F0F0F0"
+                        android:layout_marginBottom="8dp" />
+
+                    <!-- Pompa Status -->
+                    <LinearLayout
+                        android:id="@+id/layoutPompaTimerStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:visibility="gone">
+
+                        <View
+                            android:layout_width="10dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/bg_icon_circle_blue" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Pompa"
+                            android:textSize="14sp"
+                            android:textColor="#424242"
+                            android:layout_marginStart="10dp" />
+
+                        <TextView
+                            android:id="@+id/tvPompaTimerStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Aktif (otomatis)"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="#1976D2" />
+                    </LinearLayout>
+
+                    <!-- Valve 1 Timer Status -->
+                    <LinearLayout
+                        android:id="@+id/layoutValve1TimerStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:visibility="gone">
+
+                        <View
+                            android:layout_width="10dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/bg_icon_circle_orange" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Valve 1"
+                            android:textSize="14sp"
+                            android:textColor="#424242"
+                            android:layout_marginStart="10dp" />
+
+                        <TextView
+                            android:id="@+id/tvValve1TimerStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--:--"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="#FF9800" />
+                    </LinearLayout>
+
+                    <!-- Valve 2 Timer Status -->
+                    <LinearLayout
+                        android:id="@+id/layoutValve2TimerStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:visibility="gone">
+
+                        <View
+                            android:layout_width="10dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/bg_icon_circle_orange" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Valve 2"
+                            android:textSize="14sp"
+                            android:textColor="#424242"
+                            android:layout_marginStart="10dp" />
+
+                        <TextView
+                            android:id="@+id/tvValve2TimerStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--:--"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="#FF9800" />
+                    </LinearLayout>
+
+                    <!-- Valve 3 Timer Status -->
+                    <LinearLayout
+                        android:id="@+id/layoutValve3TimerStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:visibility="gone">
+
+                        <View
+                            android:layout_width="10dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/bg_icon_circle_orange" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Valve 3"
+                            android:textSize="14sp"
+                            android:textColor="#424242"
+                            android:layout_marginStart="10dp" />
+
+                        <TextView
+                            android:id="@+id/tvValve3TimerStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--:--"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="#FF9800" />
+                    </LinearLayout>
+
+                    <!-- Valve 4 Timer Status -->
+                    <LinearLayout
+                        android:id="@+id/layoutValve4TimerStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:visibility="gone">
+
+                        <View
+                            android:layout_width="10dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/bg_icon_circle_orange" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Valve 4"
+                            android:textSize="14sp"
+                            android:textColor="#424242"
+                            android:layout_marginStart="10dp" />
+
+                        <TextView
+                            android:id="@+id/tvValve4TimerStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--:--"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="#FF9800" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
         </LinearLayout>
 
     </LinearLayout>
 
-</androidx.core.widget.NestedScrollView>
+</androidx.core.widget.NestedScrollView>
