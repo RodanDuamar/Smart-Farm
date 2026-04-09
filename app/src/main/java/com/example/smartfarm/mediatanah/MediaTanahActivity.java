@@ -47,32 +47,40 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
     private ProgressBar progressKelembapan, progressPH;
 
     // Switch views
-    private MaterialSwitch switchPompa, switchValve1, switchValve2, switchValve3, switchValve4;
-    private MaterialSwitch switchKranPembuangan, switchSumberDaya;
+    private MaterialSwitch switchPompa, switchKranAir, switchKranInsek, switchKranPupuk, switchKranBuang;
+    private MaterialSwitch switchSumberDaya;
 
     // Timer buttons
-    private ImageView btnTimerValve1, btnTimerValve2, btnTimerValve3, btnTimerValve4;
+    private ImageView btnTimerKranAir, btnTimerKranInsek, btnTimerKranPupuk, btnTimerKranBuang;
 
     // Countdown display per valve
-    private TextView tvCountdownValve1, tvCountdownValve2, tvCountdownValve3, tvCountdownValve4;
+    private TextView tvCountdownKranAir, tvCountdownKranInsek, tvCountdownKranPupuk, tvCountdownKranBuang;
     private TextView tvPompaStatus;
 
     // Jadwal Status Card views
     private MaterialCardView cardJadwalStatus;
-    private LinearLayout layoutPompaTimerStatus, layoutValve1TimerStatus, layoutValve2TimerStatus;
-    private LinearLayout layoutValve3TimerStatus, layoutValve4TimerStatus;
-    private TextView tvPompaTimerStatus, tvValve1TimerStatus, tvValve2TimerStatus;
-    private TextView tvValve3TimerStatus, tvValve4TimerStatus;
+    private LinearLayout
+            layoutPompaTimerStatus,
+            layoutKranAirTimerStatus,
+            layoutKranInsekTimerStatus,
+            layoutKranPupukTimerStatus,
+            layoutKranBuangTimerStatus;;
+    private TextView
+            tvPompaTimerStatus,
+            tvKranAirTimerStatus,
+            tvKranInsekTimerStatus,
+            tvKranPupukTimerStatus,
+            tvKranBuangTimerStatus;
     private TextView btnStopAllTimers;
 
     // CountDownTimers per valve
-    private CountDownTimer timerValve1, timerValve2, timerValve3, timerValve4;
+    private CountDownTimer timerKranAir, timerKranInsek, timerKranPupuk, timerKranBuang;
 
     // Track which valves have active timers
-    private boolean isTimerValve1Active = false;
-    private boolean isTimerValve2Active = false;
-    private boolean isTimerValve3Active = false;
-    private boolean isTimerValve4Active = false;
+    private boolean isKranAirTimerActive = false;
+    private boolean isKranInsekTimerActive = false;
+    private boolean isKranPupukTimerActive = false;
+    private boolean isKranBuangTimerActive = false;
 
     // Track if pump was turned on automatically by a valve timer
     private boolean pumpAutoEnabled = false;
@@ -147,38 +155,37 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
 
         // Switch views
         switchPompa = findViewById(R.id.switchPompa);
-        switchValve1 = findViewById(R.id.switchValve1);
-        switchValve2 = findViewById(R.id.switchValve2);
-        switchValve3 = findViewById(R.id.switchValve3);
-        switchValve4 = findViewById(R.id.switchValve4);
-        switchKranPembuangan = findViewById(R.id.switchKranPembuangan);
+        switchKranAir = findViewById(R.id.switchKranAir);
+        switchKranInsek = findViewById(R.id.switchKranInsek);
+        switchKranPupuk = findViewById(R.id.switchKranPupuk);
+        switchKranBuang = findViewById(R.id.switchKranBuang);
         switchSumberDaya = findViewById(R.id.switchSumberDaya);
 
         // Timer buttons
-        btnTimerValve1 = findViewById(R.id.btnTimerValve1);
-        btnTimerValve2 = findViewById(R.id.btnTimerValve2);
-        btnTimerValve3 = findViewById(R.id.btnTimerValve3);
-        btnTimerValve4 = findViewById(R.id.btnTimerValve4);
+        btnTimerKranAir = findViewById(R.id.btnTimerValve1);
+        btnTimerKranInsek = findViewById(R.id.btnTimerValve2);
+        btnTimerKranPupuk = findViewById(R.id.btnTimerKranPupuk);
+        btnTimerKranBuang = findViewById(R.id.btnTimerKranBuang);
 
         // Countdown displays
-        tvCountdownValve1 = findViewById(R.id.tvCountdownValve1);
-        tvCountdownValve2 = findViewById(R.id.tvCountdownValve2);
-        tvCountdownValve3 = findViewById(R.id.tvCountdownValve3);
-        tvCountdownValve4 = findViewById(R.id.tvCountdownValve4);
+        tvCountdownKranAir = findViewById(R.id.tvCountdownKranAir);
+        tvCountdownKranInsek = findViewById(R.id.tvCountdownKranInsek);
+        tvCountdownKranPupuk = findViewById(R.id.tvCountdownKranPupuk);
+        tvCountdownKranBuang = findViewById(R.id.tvCountdownKranBuang);
         tvPompaStatus = findViewById(R.id.tvPompaStatus);
 
         // Jadwal status card
         cardJadwalStatus = findViewById(R.id.cardJadwalStatus);
         layoutPompaTimerStatus = findViewById(R.id.layoutPompaTimerStatus);
-        layoutValve1TimerStatus = findViewById(R.id.layoutValve1TimerStatus);
-        layoutValve2TimerStatus = findViewById(R.id.layoutValve2TimerStatus);
-        layoutValve3TimerStatus = findViewById(R.id.layoutValve3TimerStatus);
-        layoutValve4TimerStatus = findViewById(R.id.layoutValve4TimerStatus);
+        layoutKranAirTimerStatus = findViewById(R.id.layoutValve1TimerStatus);
+        layoutKranInsekTimerStatus = findViewById(R.id.layoutValve2TimerStatus);
+        layoutKranPupukTimerStatus = findViewById(R.id.layoutValve3TimerStatus);
+        layoutKranBuangTimerStatus = findViewById(R.id.layoutValve4TimerStatus);
         tvPompaTimerStatus = findViewById(R.id.tvPompaTimerStatus);
-        tvValve1TimerStatus = findViewById(R.id.tvValve1TimerStatus);
-        tvValve2TimerStatus = findViewById(R.id.tvValve2TimerStatus);
-        tvValve3TimerStatus = findViewById(R.id.tvValve3TimerStatus);
-        tvValve4TimerStatus = findViewById(R.id.tvValve4TimerStatus);
+        tvKranAirTimerStatus = findViewById(R.id.tvValve1TimerStatus);
+        tvKranInsekTimerStatus = findViewById(R.id.tvValve2TimerStatus);
+        tvKranPupukTimerStatus = findViewById(R.id.tvValve3TimerStatus);
+        tvKranBuangTimerStatus = findViewById(R.id.tvValve4TimerStatus);
         btnStopAllTimers = findViewById(R.id.btnStopAllTimers);
     }
 
@@ -192,7 +199,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
                         Toast.LENGTH_SHORT).show();
                 return;
             }
-            publishMQTT("smartfarm/kontrol/kran_air", isChecked ? "ON" : "OFF");
+            publishMQTT("smartfarm/kontrol/pompa", isChecked ? "ON" : "OFF");
             if (!isChecked) {
                 pumpAutoEnabled = false;
                 tvPompaStatus.setText("Manual");
@@ -200,25 +207,22 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
             }
         });
 
-        switchValve1.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        switchKranAir.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            publishMQTT("smartfarm/kontrol/kran_air", isChecked ? "ON" : "OFF");
+        });
+
+        switchKranInsek.setOnCheckedChangeListener((buttonView, isChecked) -> {
             publishMQTT("smartfarm/kontrol/kran_insektisida", isChecked ? "ON" : "OFF");
         });
 
-        switchValve2.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        switchKranPupuk.setOnCheckedChangeListener((buttonView, isChecked) -> {
             publishMQTT("smartfarm/kontrol/kran_pupuk", isChecked ? "ON" : "OFF");
         });
 
-        switchValve3.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            publishMQTT("smartfarm/kontrol/valve3", isChecked ? "ON" : "OFF");
-        });
-
-        switchValve4.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            publishMQTT("smartfarm/kontrol/valve4", isChecked ? "ON" : "OFF");
-        });
-
-        switchKranPembuangan.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        switchKranBuang.setOnCheckedChangeListener((buttonView, isChecked) -> {
             publishMQTT("smartfarm/kontrol/kran_pembuangan", isChecked ? "ON" : "OFF");
         });
+
 
         // Switch Sumber Daya: OFF (Left) = Listrik Rumah, ON (Right) = Panel Surya
         switchSumberDaya.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -233,10 +237,10 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
     // ==================== TIMER / SCHEDULING LOGIC ====================
 
     private void setupTimerButtons() {
-        btnTimerValve1.setOnClickListener(v -> showDurationDialog("Valve 1", 1));
-        btnTimerValve2.setOnClickListener(v -> showDurationDialog("Valve 2", 2));
-        btnTimerValve3.setOnClickListener(v -> showDurationDialog("Valve 3", 3));
-        btnTimerValve4.setOnClickListener(v -> showDurationDialog("Valve 4", 4));
+        btnTimerKranAir.setOnClickListener(v -> showDurationDialog("Kran Air", 1));
+        btnTimerKranInsek.setOnClickListener(v -> showDurationDialog("Kran Insektisida", 2));
+        btnTimerKranPupuk.setOnClickListener(v -> showDurationDialog("Kran Pupuk", 3));
+        btnTimerKranBuang.setOnClickListener(v -> showDurationDialog("Kran Pembuangan", 4));
     }
 
     /**
@@ -449,53 +453,53 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
     // ==================== HELPER METHODS ====================
 
     private boolean hasActiveValveTimers() {
-        return isTimerValve1Active || isTimerValve2Active || isTimerValve3Active || isTimerValve4Active;
+        return isKranAirTimerActive || isKranInsekTimerActive || isKranPupukTimerActive || isKranBuangTimerActive;
     }
 
     private boolean isValveTimerActive(int index) {
         switch (index) {
-            case 1: return isTimerValve1Active;
-            case 2: return isTimerValve2Active;
-            case 3: return isTimerValve3Active;
-            case 4: return isTimerValve4Active;
+            case 1: return isKranAirTimerActive;
+            case 2: return isKranInsekTimerActive;
+            case 3: return isKranPupukTimerActive;
+            case 4: return isKranBuangTimerActive;
             default: return false;
         }
     }
 
     private void setValveTimerActive(int index, boolean active) {
         switch (index) {
-            case 1: isTimerValve1Active = active; break;
-            case 2: isTimerValve2Active = active; break;
-            case 3: isTimerValve3Active = active; break;
-            case 4: isTimerValve4Active = active; break;
+            case 1: isKranAirTimerActive = active; break;
+            case 2: isKranInsekTimerActive = active; break;
+            case 3: isKranPupukTimerActive = active; break;
+            case 4: isKranBuangTimerActive = active; break;
         }
     }
 
     private CountDownTimer getValveTimer(int index) {
         switch (index) {
-            case 1: return timerValve1;
-            case 2: return timerValve2;
-            case 3: return timerValve3;
-            case 4: return timerValve4;
+            case 1: return timerKranAir;
+            case 2: return timerKranInsek;
+            case 3: return timerKranPupuk;
+            case 4: return timerKranBuang;
             default: return null;
         }
     }
 
     private void setValveTimer(int index, CountDownTimer timer) {
         switch (index) {
-            case 1: timerValve1 = timer; break;
-            case 2: timerValve2 = timer; break;
-            case 3: timerValve3 = timer; break;
-            case 4: timerValve4 = timer; break;
+            case 1: timerKranAir = timer; break;
+            case 2: timerKranInsek = timer; break;
+            case 3: timerKranPupuk = timer; break;
+            case 4: timerKranBuang = timer; break;
         }
     }
 
     private void setValveSwitch(int index, boolean checked) {
         switch (index) {
-            case 1: switchValve1.setChecked(checked); break;
-            case 2: switchValve2.setChecked(checked); break;
-            case 3: switchValve3.setChecked(checked); break;
-            case 4: switchValve4.setChecked(checked); break;
+            case 1: switchKranAir.setChecked(checked); break;
+            case 2: switchKranInsek.setChecked(checked); break;
+            case 3: switchKranPupuk.setChecked(checked); break;
+            case 4: switchKranBuang.setChecked(checked); break;
         }
     }
 
@@ -506,10 +510,10 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
     private void updateValveCountdown(int index, String text, boolean isActive) {
         TextView tv;
         switch (index) {
-            case 1: tv = tvCountdownValve1; break;
-            case 2: tv = tvCountdownValve2; break;
-            case 3: tv = tvCountdownValve3; break;
-            case 4: tv = tvCountdownValve4; break;
+            case 1: tv = tvCountdownKranAir; break;
+            case 2: tv = tvCountdownKranInsek; break;
+            case 3: tv = tvCountdownKranPupuk; break;
+            case 4: tv = tvCountdownKranBuang; break;
             default: return;
         }
         tv.setText(text);
@@ -528,28 +532,28 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
         tvPompaTimerStatus.setText("Aktif (otomatis)");
 
         switch (valveIndex) {
-            case 1: layoutValve1TimerStatus.setVisibility(View.VISIBLE); break;
-            case 2: layoutValve2TimerStatus.setVisibility(View.VISIBLE); break;
-            case 3: layoutValve3TimerStatus.setVisibility(View.VISIBLE); break;
-            case 4: layoutValve4TimerStatus.setVisibility(View.VISIBLE); break;
+            case 1: layoutKranAirTimerStatus.setVisibility(View.VISIBLE); break;
+            case 2: layoutKranInsekTimerStatus.setVisibility(View.VISIBLE); break;
+            case 3: layoutKranPupukTimerStatus.setVisibility(View.VISIBLE); break;
+            case 4: layoutKranBuangTimerStatus.setVisibility(View.VISIBLE); break;
         }
     }
 
     private void updateTimerStatusCard(int valveIndex, String timeStr) {
         switch (valveIndex) {
-            case 1: tvValve1TimerStatus.setText(timeStr); break;
-            case 2: tvValve2TimerStatus.setText(timeStr); break;
-            case 3: tvValve3TimerStatus.setText(timeStr); break;
-            case 4: tvValve4TimerStatus.setText(timeStr); break;
+            case 1: tvKranAirTimerStatus.setText(timeStr); break;
+            case 2: tvKranInsekTimerStatus.setText(timeStr); break;
+            case 3: tvKranPupukTimerStatus.setText(timeStr); break;
+            case 4: tvKranBuangTimerStatus.setText(timeStr); break;
         }
     }
 
     private void hideTimerStatusRow(int valveIndex) {
         switch (valveIndex) {
-            case 1: layoutValve1TimerStatus.setVisibility(View.GONE); break;
-            case 2: layoutValve2TimerStatus.setVisibility(View.GONE); break;
-            case 3: layoutValve3TimerStatus.setVisibility(View.GONE); break;
-            case 4: layoutValve4TimerStatus.setVisibility(View.GONE); break;
+            case 1: layoutKranAirTimerStatus.setVisibility(View.GONE); break;
+            case 2: layoutKranInsekTimerStatus.setVisibility(View.GONE); break;
+            case 3: layoutKranPupukTimerStatus.setVisibility(View.GONE); break;
+            case 4: layoutKranBuangTimerStatus.setVisibility(View.GONE); break;
         }
         // Jika tidak ada valve yang aktif, sembunyikan pompa status juga
         if (!hasActiveValveTimers()) {
@@ -567,10 +571,10 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
     @Override
     protected void onDestroy() {
         // Cancel semua timer yang aktif
-        if (timerValve1 != null) timerValve1.cancel();
-        if (timerValve2 != null) timerValve2.cancel();
-        if (timerValve3 != null) timerValve3.cancel();
-        if (timerValve4 != null) timerValve4.cancel();
+        if (timerKranAir != null) timerKranAir.cancel();
+        if (timerKranInsek != null) timerKranInsek.cancel();
+        if (timerKranPupuk != null) timerKranPupuk.cancel();
+        if (timerKranBuang != null) timerKranBuang.cancel();
         super.onDestroy();
     }
 

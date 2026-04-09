@@ -527,12 +527,12 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Valve 1"
+                                    android:text="Kran Air"
                                     android:textSize="15sp"
                                     android:textColor="#424242" />
 
                                 <TextView
-                                    android:id="@+id/tvCountdownValve1"
+                                    android:id="@+id/tvCountdownKranAir"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Tidak dijadwalkan"
@@ -549,11 +549,11 @@
                                 android:padding="6dp"
                                 android:src="@drawable/ic_timer"
                                 android:background="@drawable/bg_icon_circle_green"
-                                android:contentDescription="Set Timer Valve 1"
+                                android:contentDescription="Set Timer Kran Air"
                                 android:layout_marginEnd="8dp" />
 
                             <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/switchValve1"
+                                android:id="@+id/switchKranAir"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content" />
                         </LinearLayout>
@@ -596,12 +596,12 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Valve 2"
+                                    android:text="Kran Insektisida"
                                     android:textSize="15sp"
                                     android:textColor="#424242" />
 
                                 <TextView
-                                    android:id="@+id/tvCountdownValve2"
+                                    android:id="@+id/tvCountdownKranInsek"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Tidak dijadwalkan"
@@ -622,7 +622,7 @@
                                 android:layout_marginEnd="8dp" />
 
                             <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/switchValve2"
+                                android:id="@+id/switchKranInsek"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content" />
                         </LinearLayout>
@@ -665,12 +665,12 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Valve 3"
+                                    android:text="Kran Pupuk"
                                     android:textSize="15sp"
                                     android:textColor="#424242" />
 
                                 <TextView
-                                    android:id="@+id/tvCountdownValve3"
+                                    android:id="@+id/tvCountdownKranPupuk"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Tidak dijadwalkan"
@@ -681,7 +681,7 @@
 
                             <!-- Timer Button -->
                             <ImageView
-                                android:id="@+id/btnTimerValve3"
+                                android:id="@+id/btnTimerKranPupuk"
                                 android:layout_width="36dp"
                                 android:layout_height="36dp"
                                 android:padding="6dp"
@@ -691,13 +691,13 @@
                                 android:layout_marginEnd="8dp" />
 
                             <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/switchValve3"
+                                android:id="@+id/switchKranPupuk"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content" />
                         </LinearLayout>
                     </LinearLayout>
 
-                    <!-- ====== Valve 4 Row ====== -->
+                    <!-- ====== Kran Pembuangan Row ====== -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -714,14 +714,14 @@
                             <FrameLayout
                                 android:layout_width="40dp"
                                 android:layout_height="40dp"
-                                android:background="@drawable/bg_icon_circle_orange">
+                                android:background="@drawable/bg_icon_circle_blue">
 
                                 <ImageView
                                     android:layout_width="20dp"
                                     android:layout_height="20dp"
                                     android:layout_gravity="center"
-                                    android:src="@drawable/ic_add_circle"
-                                    android:contentDescription="Valve 4 Icon" />
+                                    android:src="@android:drawable/ic_menu_delete"
+                                    android:contentDescription="Waste Icon" />
                             </FrameLayout>
 
                             <LinearLayout
@@ -734,12 +734,12 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Valve 4"
+                                    android:text="Kran Pembuangan"
                                     android:textSize="15sp"
                                     android:textColor="#424242" />
 
                                 <TextView
-                                    android:id="@+id/tvCountdownValve4"
+                                    android:id="@+id/tvCountdownKranBuang"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Tidak dijadwalkan"
@@ -750,7 +750,7 @@
 
                             <!-- Timer Button -->
                             <ImageView
-                                android:id="@+id/btnTimerValve4"
+                                android:id="@+id/btnTimerKranBuang"
                                 android:layout_width="36dp"
                                 android:layout_height="36dp"
                                 android:padding="6dp"
@@ -760,7 +760,7 @@
                                 android:layout_marginEnd="8dp" />
 
                             <com.google.android.material.materialswitch.MaterialSwitch
-                                android:id="@+id/switchValve4"
+                                android:id="@+id/switchKranBuang"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content" />
                         </LinearLayout>
@@ -1055,4 +1055,4 @@
 
     </LinearLayout>
 
-</androidx.core.widget.NestedScrollView>
+</androidx.core.widget.NestedScrollView>

@@ -18,7 +18,7 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 public abstract class BaseSmartFarmActivity extends AppCompatActivity {
 
     private static final String TAG = "BaseSmartFarm";
-    private static final String BROKER_URL = "tcp://broker.hivemq.com:1883";
+    private static final String BROKER_URL = "tcp://broker.emqx.io:1883";
 
     protected MqttClient mqttClient;
 
@@ -49,6 +49,8 @@ public abstract class BaseSmartFarmActivity extends AppCompatActivity {
         try {
             mqttClient = new MqttClient(BROKER_URL, getClientId(), null);
             MqttConnectOptions options = new MqttConnectOptions();
+            options.setUserName("ardana_garden");
+            options.setPassword("rahasia1234".toCharArray());
             options.setCleanSession(true);
 
             mqttClient.connect(options);
