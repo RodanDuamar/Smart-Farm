@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,24 +22,35 @@ import com.example.smartfarm.R;
 import com.example.smartfarm.base.BaseSmartFarmActivity;
 import com.example.smartfarm.base.NotificationHelper;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.chip.Chip;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
-import java.util.Locale;
+import java.util.Calendar;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Activity untuk monitoring dan kontrol sistem irigasi Media Tanah.
- * Menampilkan sensor kelembapan, pH tanah, valve kontrol, dan penjadwalan durasi.
+ * Menampilkan sensor kelembapan, pH tanah, valve kontrol, dan penjadwalan.
  * Extends BaseSmartFarmActivity untuk reuse MQTT logic.
  *
  * Fitur:
  * - Monitoring sensor (kelembapan, pH)
  * - Notifikasi peringatan kondisi abnormal
- * - Penjadwalan durasi pompa & valve (pompa wajib ON saat valve dijadwalkan)
+ * - Penjadwalan valve per hari dengan durasi (+ pompa otomatis)
+ *
+ * Desain OOP:
+ * - Scheduling logic didelegasikan ke ValveScheduleManager
+ * - Komunikasi via ScheduleCallback interface
+ * - Model jadwal disimpan di ScheduleConfig
  */
-public class MediaTanahActivity extends BaseSmartFarmActivity {
+public class MediaTanahActivity extends BaseSmartFarmActivity
+        implements ValveScheduleManager.ScheduleCallback {
 
     private static final String TAG = "MediaTanah";
+
+    // ==================== VIEWS ====================
 
     // Sensor views
     private TextView tvKelembapan, tvPH, tvStatusKelembapan, tvStatusPH;
@@ -53,47 +63,37 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
     // Timer buttons
     private ImageView btnTimerKranAir, btnTimerKranInsek, btnTimerKranPupuk, btnTimerKranBuang;
 
-    // Countdown display per valve
+    // Countdown/schedule display per valve
     private TextView tvCountdownKranAir, tvCountdownKranInsek, tvCountdownKranPupuk, tvCountdownKranBuang;
     private TextView tvPompaStatus;
 
     // Jadwal Status Card views
     private MaterialCardView cardJadwalStatus;
-    private LinearLayout
-            layoutPompaTimerStatus,
-            layoutKranAirTimerStatus,
-            layoutKranInsekTimerStatus,
-            layoutKranPupukTimerStatus,
-            layoutKranBuangTimerStatus;;
-    private TextView
-            tvPompaTimerStatus,
-            tvKranAirTimerStatus,
-            tvKranInsekTimerStatus,
-            tvKranPupukTimerStatus,
-            tvKranBuangTimerStatus;
+    private LinearLayout layoutPompaTimerStatus;
+    private LinearLayout layoutKranAirTimerStatus, layoutKranInsekTimerStatus;
+    private LinearLayout layoutKranPupukTimerStatus, layoutKranBuangTimerStatus;
+    private TextView tvPompaTimerStatus;
+    private TextView tvKranAirTimerStatus, tvKranInsekTimerStatus;
+    private TextView tvKranPupukTimerStatus, tvKranBuangTimerStatus;
     private TextView btnStopAllTimers;
 
-    // CountDownTimers per valve
-    private CountDownTimer timerKranAir, timerKranInsek, timerKranPupuk, timerKranBuang;
+    // ==================== MANAGER ====================
 
-    // Track which valves have active timers
-    private boolean isKranAirTimerActive = false;
-    private boolean isKranInsekTimerActive = false;
-    private boolean isKranPupukTimerActive = false;
-    private boolean isKranBuangTimerActive = false;
+    /** Manager yang mengelola semua scheduling & timer logic */
+    private ValveScheduleManager scheduleManager;
 
-    // Track if pump was turned on automatically by a valve timer
-    private boolean pumpAutoEnabled = false;
+    // ==================== PERMISSION ====================
 
-    // Permission launcher untuk Android 13+
-    private final ActivityResultLauncher<String> notificationPermissionLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+    private final ActivityResultLauncher<String> notificationPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
                     Log.d(TAG, "Notification permission granted");
                 } else {
                     Log.w(TAG, "Notification permission denied");
                 }
             });
+
+    // ==================== LIFECYCLE ====================
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,10 +104,16 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
         NotificationHelper.createNotificationChannels(this);
         requestNotificationPermission();
 
+        // Inisialisasi manager (akan load jadwal dari SharedPreferences)
+        scheduleManager = new ValveScheduleManager(this, this);
+
         setupMQTT();
         initViews();
         setupSwitchListeners();
         setupTimerButtons();
+
+        // Tampilkan info jadwal yang tersimpan di UI
+        refreshAllScheduleDisplays();
     }
 
     @Override
@@ -132,9 +138,17 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
         }
     }
 
-    /**
-     * Meminta izin notification untuk Android 13 (API 33) ke atas.
-     */
+    @Override
+    protected void onDestroy() {
+        // Cancel semua timer saat activity dihancurkan
+        if (scheduleManager != null) {
+            scheduleManager.cancelAllTimers();
+        }
+        super.onDestroy();
+    }
+
+    // ==================== INITIALIZATION ====================
+
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this,
@@ -167,7 +181,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
         btnTimerKranPupuk = findViewById(R.id.btnTimerKranPupuk);
         btnTimerKranBuang = findViewById(R.id.btnTimerKranBuang);
 
-        // Countdown displays
+        // Countdown/schedule displays
         tvCountdownKranAir = findViewById(R.id.tvCountdownKranAir);
         tvCountdownKranInsek = findViewById(R.id.tvCountdownKranInsek);
         tvCountdownKranPupuk = findViewById(R.id.tvCountdownKranPupuk);
@@ -192,7 +206,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
     private void setupSwitchListeners() {
         switchPompa.setOnCheckedChangeListener((buttonView, isChecked) -> {
             // Jika pompa dimatikan manual tapi ada valve timer aktif, cegah
-            if (!isChecked && hasActiveValveTimers()) {
+            if (!isChecked && scheduleManager.hasActiveTimers()) {
                 switchPompa.setChecked(true);
                 Toast.makeText(this,
                         "⚠ Pompa tidak bisa dimatikan saat valve dijadwalkan",
@@ -201,328 +215,382 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
             }
             publishMQTT("smartfarm/kontrol/pompa", isChecked ? "ON" : "OFF");
             if (!isChecked) {
-                pumpAutoEnabled = false;
+                scheduleManager.setPumpAutoEnabled(false);
                 tvPompaStatus.setText("Manual");
                 tvPompaStatus.setTextColor(getColor(R.color.text_hint));
             }
         });
 
-        switchKranAir.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            publishMQTT("smartfarm/kontrol/kran_air", isChecked ? "ON" : "OFF");
-        });
+        switchKranAir.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> publishMQTT("smartfarm/kontrol/kran_air", isChecked ? "ON" : "OFF"));
 
-        switchKranInsek.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            publishMQTT("smartfarm/kontrol/kran_insektisida", isChecked ? "ON" : "OFF");
-        });
+        switchKranInsek.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> publishMQTT("smartfarm/kontrol/kran_insektisida", isChecked ? "ON" : "OFF"));
 
-        switchKranPupuk.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            publishMQTT("smartfarm/kontrol/kran_pupuk", isChecked ? "ON" : "OFF");
-        });
+        switchKranPupuk.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> publishMQTT("smartfarm/kontrol/kran_pupuk", isChecked ? "ON" : "OFF"));
 
-        switchKranBuang.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            publishMQTT("smartfarm/kontrol/kran_pembuangan", isChecked ? "ON" : "OFF");
-        });
+        switchKranBuang.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> publishMQTT("smartfarm/kontrol/kran_pembuangan", isChecked ? "ON" : "OFF"));
 
-
-        // Switch Sumber Daya: OFF (Left) = Listrik Rumah, ON (Right) = Panel Surya
         switchSumberDaya.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            String source = isChecked ? "SOLAR" : "PLN";
+            String source = isChecked ? "AKI" : "PLN";
             publishMQTT("smartfarm/kontrol/sumber_daya", source);
         });
 
         // Stop all timers button
-        btnStopAllTimers.setOnClickListener(v -> stopAllTimers());
+        btnStopAllTimers.setOnClickListener(v -> confirmStopAllTimers());
     }
-
-    // ==================== TIMER / SCHEDULING LOGIC ====================
 
     private void setupTimerButtons() {
-        btnTimerKranAir.setOnClickListener(v -> showDurationDialog("Kran Air", 1));
-        btnTimerKranInsek.setOnClickListener(v -> showDurationDialog("Kran Insektisida", 2));
-        btnTimerKranPupuk.setOnClickListener(v -> showDurationDialog("Kran Pupuk", 3));
-        btnTimerKranBuang.setOnClickListener(v -> showDurationDialog("Kran Pembuangan", 4));
+        btnTimerKranAir.setOnClickListener(v -> showScheduleDialog("Kran Air", 1));
+        btnTimerKranInsek.setOnClickListener(v -> showScheduleDialog("Kran Insektisida", 2));
+        btnTimerKranPupuk.setOnClickListener(v -> showScheduleDialog("Kran Pupuk", 3));
+        btnTimerKranBuang.setOnClickListener(v -> showScheduleDialog("Kran Pembuangan", 4));
     }
 
+    // ==================== SCHEDULING DIALOG ====================
+
     /**
-     * Menampilkan dialog untuk mengatur durasi valve.
-     *
-     * @param valveName Nama valve (untuk display)
-     * @param valveIndex Index valve (1-4)
+     * Menampilkan dialog penjadwalan untuk valve tertentu.
+     * Jika valve sudah punya timer aktif, tanyakan apakah ingin dihentikan.
+     * Jika sudah punya jadwal, pre-fill dialog dengan jadwal yang ada.
      */
-    private void showDurationDialog(String valveName, int valveIndex) {
-        // Cek apakah valve ini sudah punya timer aktif
-        if (isValveTimerActive(valveIndex)) {
-            // Tampilkan dialog konfirmasi untuk menghentikan timer
+    private void showScheduleDialog(String valveName, int valveIndex) {
+        // Jika timer sedang berjalan, tawarkan opsi hentikan
+        if (scheduleManager.isTimerActive(valveIndex)) {
             new MaterialAlertDialogBuilder(this)
                     .setTitle("Timer " + valveName + " Aktif")
                     .setMessage("Timer sedang berjalan. Hentikan timer?")
                     .setPositiveButton("Hentikan", (dialog, which) -> {
-                        stopValveTimer(valveIndex);
+                        scheduleManager.stopValve(valveIndex);
+                        Toast.makeText(this, "Timer " + valveName + " dihentikan",
+                                Toast.LENGTH_SHORT).show();
                     })
                     .setNegativeButton("Batal", null)
                     .show();
             return;
         }
 
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_set_duration, null);
+        // Inflate dialog layout baru
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_set_schedule, null);
 
+        // Bind views
         TextView tvTitle = dialogView.findViewById(R.id.tvDialogTitle);
         TextView tvSubtitle = dialogView.findViewById(R.id.tvDialogSubtitle);
-        NumberPicker npMenit = dialogView.findViewById(R.id.npMenit);
-        NumberPicker npDetik = dialogView.findViewById(R.id.npDetik);
+        android.widget.TimePicker timePickerStart = dialogView.findViewById(R.id.timePickerStart);
+        android.widget.TimePicker timePickerEnd = dialogView.findViewById(R.id.timePickerEnd);
 
-        tvTitle.setText("Atur Durasi " + valveName);
+        timePickerStart.setIs24HourView(true);
+        timePickerEnd.setIs24HourView(true);
+
+        // Day chips
+        Chip chipSenin = dialogView.findViewById(R.id.chipSenin);
+        Chip chipSelasa = dialogView.findViewById(R.id.chipSelasa);
+        Chip chipRabu = dialogView.findViewById(R.id.chipRabu);
+        Chip chipKamis = dialogView.findViewById(R.id.chipKamis);
+        Chip chipJumat = dialogView.findViewById(R.id.chipJumat);
+        Chip chipSabtu = dialogView.findViewById(R.id.chipSabtu);
+        Chip chipMinggu = dialogView.findViewById(R.id.chipMinggu);
+
+        // Map chip to Calendar constant
+        final int[][] chipDayMap = {
+                { chipSenin.getId(), Calendar.MONDAY },
+                { chipSelasa.getId(), Calendar.TUESDAY },
+                { chipRabu.getId(), Calendar.WEDNESDAY },
+                { chipKamis.getId(), Calendar.THURSDAY },
+                { chipJumat.getId(), Calendar.FRIDAY },
+                { chipSabtu.getId(), Calendar.SATURDAY },
+                { chipMinggu.getId(), Calendar.SUNDAY }
+        };
+
+        Chip[] allChips = { chipSenin, chipSelasa, chipRabu, chipKamis, chipJumat, chipSabtu, chipMinggu };
+
+        // Setup title
+        tvTitle.setText("Atur Jadwal " + valveName);
         tvSubtitle.setText("Pompa akan otomatis menyala bersama " + valveName);
 
-        // Setup NumberPickers
-        npMenit.setMinValue(0);
-        npMenit.setMaxValue(60);
-        npMenit.setValue(5); // Default 5 menit
+        // Pre-fill jika sudah ada jadwal tersimpan
+        ScheduleConfig existingConfig = scheduleManager.getSchedule(valveIndex);
+        if (existingConfig != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                timePickerStart.setHour(existingConfig.getStartHour());
+                timePickerStart.setMinute(existingConfig.getStartMinute());
+                timePickerEnd.setHour(existingConfig.getEndHour());
+                timePickerEnd.setMinute(existingConfig.getEndMinute());
+            } else {
+                timePickerStart.setCurrentHour(existingConfig.getStartHour());
+                timePickerStart.setCurrentMinute(existingConfig.getStartMinute());
+                timePickerEnd.setCurrentHour(existingConfig.getEndHour());
+                timePickerEnd.setCurrentMinute(existingConfig.getEndMinute());
+            }
 
-        npDetik.setMinValue(0);
-        npDetik.setMaxValue(59);
-        npDetik.setValue(0);
+            // Check chips sesuai hari yang tersimpan
+            for (Chip chip : allChips) {
+                for (int[] mapping : chipDayMap) {
+                    if (mapping[0] == chip.getId()) {
+                        chip.setChecked(existingConfig.isDayScheduled(mapping[1]));
+                        break;
+                    }
+                }
+            }
+        }
 
+        // Build & show dialog dengan 3 tombol
         new MaterialAlertDialogBuilder(this)
                 .setView(dialogView)
-                .setPositiveButton("Mulai", (dialog, which) -> {
-                    int menit = npMenit.getValue();
-                    int detik = npDetik.getValue();
-                    long totalMs = (menit * 60L + detik) * 1000L;
+                .setPositiveButton("Simpan Jadwal", (dialog, which) -> {
+                    int startHour, startMinute, endHour, endMinute;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        startHour = timePickerStart.getHour();
+                        startMinute = timePickerStart.getMinute();
+                        endHour = timePickerEnd.getHour();
+                        endMinute = timePickerEnd.getMinute();
+                    } else {
+                        startHour = timePickerStart.getCurrentHour();
+                        startMinute = timePickerStart.getCurrentMinute();
+                        endHour = timePickerEnd.getCurrentHour();
+                        endMinute = timePickerEnd.getCurrentMinute();
+                    }
 
-                    if (totalMs <= 0) {
-                        Toast.makeText(this, "Durasi harus lebih dari 0", Toast.LENGTH_SHORT).show();
+                    // Kumpulkan hari yang dipilih
+                    Set<Integer> selectedDays = new LinkedHashSet<>();
+                    for (Chip chip : allChips) {
+                        if (chip.isChecked()) {
+                            for (int[] mapping : chipDayMap) {
+                                if (mapping[0] == chip.getId()) {
+                                    selectedDays.add(mapping[1]);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (selectedDays.isEmpty()) {
+                        Toast.makeText(this, "Pilih minimal 1 hari",
+                                Toast.LENGTH_SHORT).show();
                         return;
                     }
 
-                    startValveTimer(valveIndex, totalMs);
+                    // Buat dan simpan jadwal baru
+                    ScheduleConfig config = new ScheduleConfig(selectedDays, startHour, startMinute, endHour, endMinute, true);
+                    
+                    if (!config.hasValidDuration()) {
+                        Toast.makeText(this, "Jam mulai as dan jam selesai tidak boleh sama", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    scheduleManager.setSchedule(valveIndex, config);
+
+                    Toast.makeText(this,
+                            "✅ Jadwal " + valveName + " disimpan: " + config.getDaysDisplayText()
+                                    + " • " + config.getTimeRangeDisplayText(),
+                            Toast.LENGTH_LONG).show();
+                })
+                .setNeutralButton("Jalankan Sekarang", (dialog, which) -> {
+                    int startHour, startMinute, endHour, endMinute;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        startHour = timePickerStart.getHour();
+                        startMinute = timePickerStart.getMinute();
+                        endHour = timePickerEnd.getHour();
+                        endMinute = timePickerEnd.getMinute();
+                    } else {
+                        startHour = timePickerStart.getCurrentHour();
+                        startMinute = timePickerStart.getCurrentMinute();
+                        endHour = timePickerEnd.getCurrentHour();
+                        endMinute = timePickerEnd.getCurrentMinute();
+                    }
+
+                    // Simpan juga hari yang dipilih (jika ada)
+                    Set<Integer> selectedDays = new LinkedHashSet<>();
+                    for (Chip chip : allChips) {
+                        if (chip.isChecked()) {
+                            for (int[] mapping : chipDayMap) {
+                                if (mapping[0] == chip.getId()) {
+                                    selectedDays.add(mapping[1]);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Simpan config (enabled hanya jika ada hari dipilih)
+                    ScheduleConfig config = new ScheduleConfig(
+                            selectedDays, startHour, startMinute, endHour, endMinute, !selectedDays.isEmpty());
+                    
+                    if (!config.hasValidDuration()) {
+                        Toast.makeText(this, "Jam mulai as dan jam selesai tidak boleh sama", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    scheduleManager.setSchedule(valveIndex, config);
+
+                    // Langsung jalankan timer sekarang
+                    long totalMs = config.getTotalDurationMs();
+                    scheduleManager.startValveWithDuration(valveIndex, totalMs);
+                    showTimerStatusCard(valveIndex);
+
+                    Toast.makeText(this,
+                            "⏱ " + valveName + " dimulai: " + ValveScheduleManager.formatTime(totalMs),
+                            Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Batal", null)
                 .show();
     }
 
     /**
-     * Memulai timer untuk valve tertentu.
-     * Pompa WAJIB menyala ketika valve dijadwalkan.
+     * Konfirmasi sebelum menghentikan semua timer.
      */
-    private void startValveTimer(int valveIndex, long durationMs) {
-        // 1. Nyalakan pompa otomatis jika belum ON
-        ensurePumpOn();
-
-        // 2. Nyalakan valve
-        setValveSwitch(valveIndex, true);
-
-        // 3. Mulai countdown
-        CountDownTimer timer = new CountDownTimer(durationMs, 1000) {
-            @Override
-            public void onTick(long millisUntilFinished) {
-                String timeStr = formatTime(millisUntilFinished);
-                updateValveCountdown(valveIndex, "⏱ Sisa: " + timeStr, true);
-                updateTimerStatusCard(valveIndex, timeStr);
-            }
-
-            @Override
-            public void onFinish() {
-                // Matikan valve
-                setValveSwitch(valveIndex, false);
-                setValveTimerActive(valveIndex, false);
-                updateValveCountdown(valveIndex, "✅ Selesai", false);
-                hideTimerStatusRow(valveIndex);
-
-                // Cek apakah masih ada valve timer lain yang aktif
-                if (!hasActiveValveTimers()) {
-                    // Semua timer selesai, matikan pompa (jika auto-enabled)
-                    turnOffPumpAuto();
-                    cardJadwalStatus.setVisibility(View.GONE);
-                }
-
-                Toast.makeText(MediaTanahActivity.this,
-                        "Timer " + getValveName(valveIndex) + " selesai",
-                        Toast.LENGTH_SHORT).show();
-
-                // Kirim notifikasi
-                NotificationHelper.sendWarningNotification(
-                        MediaTanahActivity.this,
-                        NotificationHelper.CHANNEL_MEDIA_TANAH,
-                        3000 + valveIndex,
-                        "✅ Timer " + getValveName(valveIndex) + " Selesai",
-                        getValveName(valveIndex) + " telah dimatikan otomatis setelah durasi selesai.",
-                        MediaTanahActivity.class
-                );
-            }
-        };
-
-        // Simpan reference timer
-        setValveTimer(valveIndex, timer);
-        setValveTimerActive(valveIndex, true);
-        timer.start();
-
-        // Update UI
-        showTimerStatusCard(valveIndex);
-
-        Toast.makeText(this,
-                "Timer " + getValveName(valveIndex) + " dimulai: " + formatTime(durationMs),
-                Toast.LENGTH_SHORT).show();
-
-        Log.d(TAG, "Timer started: " + getValveName(valveIndex) + " for " + formatTime(durationMs));
-    }
-
-    /**
-     * Memastikan pompa ON. Jika belum ON, nyalakan otomatis.
-     */
-    private void ensurePumpOn() {
-        if (!switchPompa.isChecked()) {
-            pumpAutoEnabled = true;
-            switchPompa.setChecked(true);
-            tvPompaStatus.setText("Otomatis (valve aktif)");
-            tvPompaStatus.setTextColor(getColor(R.color.status_info));
-        } else if (!pumpAutoEnabled) {
-            // Pompa sudah ON manual, tandai bahwa ada valve timer
-            tvPompaStatus.setText("Manual + Valve aktif");
-            tvPompaStatus.setTextColor(getColor(R.color.status_info));
-        }
-    }
-
-    /**
-     * Matikan pompa otomatis saat semua valve timer selesai.
-     * Hanya matikan jika pompa dinyalakan secara otomatis.
-     */
-    private void turnOffPumpAuto() {
-        if (pumpAutoEnabled) {
-            pumpAutoEnabled = false;
-            switchPompa.setChecked(false);
-            tvPompaStatus.setText("Manual");
-            tvPompaStatus.setTextColor(getColor(R.color.text_hint));
-            Log.d(TAG, "Pump auto-off: all valve timers finished");
-        } else {
-            tvPompaStatus.setText("Manual");
-            tvPompaStatus.setTextColor(getColor(R.color.text_hint));
-        }
-    }
-
-    /**
-     * Hentikan timer untuk valve tertentu.
-     */
-    private void stopValveTimer(int valveIndex) {
-        CountDownTimer timer = getValveTimer(valveIndex);
-        if (timer != null) {
-            timer.cancel();
-        }
-        setValveSwitch(valveIndex, false);
-        setValveTimerActive(valveIndex, false);
-        setValveTimer(valveIndex, null);
-        updateValveCountdown(valveIndex, "Tidak dijadwalkan", false);
-        hideTimerStatusRow(valveIndex);
-
-        // Cek apakah masih ada valve timer lain yang aktif
-        if (!hasActiveValveTimers()) {
-            turnOffPumpAuto();
-            cardJadwalStatus.setVisibility(View.GONE);
-        }
-
-        Toast.makeText(this, "Timer " + getValveName(valveIndex) + " dihentikan",
-                Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * Hentikan semua timer yang aktif.
-     */
-    private void stopAllTimers() {
+    private void confirmStopAllTimers() {
         new MaterialAlertDialogBuilder(this)
                 .setTitle("Hentikan Semua Timer")
                 .setMessage("Yakin ingin menghentikan semua timer aktif? Semua valve dan pompa akan dimatikan.")
                 .setPositiveButton("Hentikan Semua", (dialog, which) -> {
-                    for (int i = 1; i <= 4; i++) {
-                        if (isValveTimerActive(i)) {
-                            CountDownTimer timer = getValveTimer(i);
-                            if (timer != null) timer.cancel();
-                            setValveSwitch(i, false);
-                            setValveTimerActive(i, false);
-                            setValveTimer(i, null);
-                            updateValveCountdown(i, "Tidak dijadwalkan", false);
-                        }
-                    }
-                    turnOffPumpAuto();
-                    cardJadwalStatus.setVisibility(View.GONE);
+                    scheduleManager.stopAllValves();
                     Toast.makeText(this, "Semua timer dihentikan", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Batal", null)
                 .show();
     }
 
-    // ==================== HELPER METHODS ====================
+    // ==================== SCHEDULE CALLBACK IMPLEMENTATION ====================
 
-    private boolean hasActiveValveTimers() {
-        return isKranAirTimerActive || isKranInsekTimerActive || isKranPupukTimerActive || isKranBuangTimerActive;
+    @Override
+    public void onValveSwitched(int valveIndex, boolean turnOn) {
+        getValveSwitch(valveIndex).setChecked(turnOn);
     }
 
-    private boolean isValveTimerActive(int index) {
-        switch (index) {
-            case 1: return isKranAirTimerActive;
-            case 2: return isKranInsekTimerActive;
-            case 3: return isKranPupukTimerActive;
-            case 4: return isKranBuangTimerActive;
-            default: return false;
-        }
-    }
-
-    private void setValveTimerActive(int index, boolean active) {
-        switch (index) {
-            case 1: isKranAirTimerActive = active; break;
-            case 2: isKranInsekTimerActive = active; break;
-            case 3: isKranPupukTimerActive = active; break;
-            case 4: isKranBuangTimerActive = active; break;
-        }
-    }
-
-    private CountDownTimer getValveTimer(int index) {
-        switch (index) {
-            case 1: return timerKranAir;
-            case 2: return timerKranInsek;
-            case 3: return timerKranPupuk;
-            case 4: return timerKranBuang;
-            default: return null;
-        }
-    }
-
-    private void setValveTimer(int index, CountDownTimer timer) {
-        switch (index) {
-            case 1: timerKranAir = timer; break;
-            case 2: timerKranInsek = timer; break;
-            case 3: timerKranPupuk = timer; break;
-            case 4: timerKranBuang = timer; break;
-        }
-    }
-
-    private void setValveSwitch(int index, boolean checked) {
-        switch (index) {
-            case 1: switchKranAir.setChecked(checked); break;
-            case 2: switchKranInsek.setChecked(checked); break;
-            case 3: switchKranPupuk.setChecked(checked); break;
-            case 4: switchKranBuang.setChecked(checked); break;
-        }
-    }
-
-    private String getValveName(int index) {
-        return "Valve " + index;
-    }
-
-    private void updateValveCountdown(int index, String text, boolean isActive) {
-        TextView tv;
-        switch (index) {
-            case 1: tv = tvCountdownKranAir; break;
-            case 2: tv = tvCountdownKranInsek; break;
-            case 3: tv = tvCountdownKranPupuk; break;
-            case 4: tv = tvCountdownKranBuang; break;
-            default: return;
-        }
-        tv.setText(text);
-        if (isActive) {
+    @Override
+    public void onCountdownTick(int valveIndex, long millisRemaining, String formattedTime) {
+        // Update countdown text di bawah valve
+        TextView tv = getCountdownTextView(valveIndex);
+        if (tv != null) {
+            tv.setText("⏱ Sisa: " + formattedTime);
             tv.setTextColor(getColor(R.color.status_info));
-        } else if (text.contains("Selesai")) {
+        }
+
+        // Update status card
+        updateTimerStatusCard(valveIndex, formattedTime);
+    }
+
+    @Override
+    public void onTimerFinished(int valveIndex) {
+        String valveName = ValveScheduleManager.getValveName(valveIndex);
+
+        // Update countdown text
+        TextView tv = getCountdownTextView(valveIndex);
+        if (tv != null) {
+            tv.setText("✅ Selesai");
             tv.setTextColor(getColor(R.color.status_good));
+        }
+
+        // Sembunyikan dari status card
+        hideTimerStatusRow(valveIndex);
+
+        Toast.makeText(this, "Timer " + valveName + " selesai", Toast.LENGTH_SHORT).show();
+
+        // Kirim notifikasi
+        NotificationHelper.sendWarningNotification(
+                this,
+                NotificationHelper.CHANNEL_MEDIA_TANAH,
+                3000 + valveIndex,
+                "✅ Timer " + valveName + " Selesai",
+                valveName + " telah dimatikan otomatis setelah durasi selesai.",
+                MediaTanahActivity.class);
+
+        // Kembalikan tampilan jadwal setelah delay singkat
+        tv.postDelayed(() -> refreshScheduleDisplay(valveIndex), 3000);
+    }
+
+    @Override
+    public void onPumpAutoControl(boolean turnOn, String statusText) {
+        switchPompa.setChecked(turnOn);
+        tvPompaStatus.setText(statusText);
+        tvPompaStatus.setTextColor(getColor(
+                turnOn ? R.color.status_info : R.color.text_hint));
+    }
+
+    @Override
+    public void onScheduleUpdated(int valveIndex, ScheduleConfig config) {
+        refreshScheduleDisplay(valveIndex);
+    }
+
+    @Override
+    public void onAllTimersFinished() {
+        cardJadwalStatus.setVisibility(View.GONE);
+    }
+
+    // ==================== UI HELPER METHODS ====================
+
+    /**
+     * Refresh tampilan jadwal untuk satu valve.
+     */
+    private void refreshScheduleDisplay(int valveIndex) {
+        if (scheduleManager.isTimerActive(valveIndex)) {
+            return; // Jangan overwrite countdown yang sedang jalan
+        }
+
+        ScheduleConfig config = scheduleManager.getSchedule(valveIndex);
+        TextView tv = getCountdownTextView(valveIndex);
+        if (tv == null)
+            return;
+
+        if (config != null && config.isEnabled() && config.hasDaysSelected()) {
+            tv.setText(config.getSummaryText());
+            // Highlight jika hari ini termasuk jadwal
+            if (config.isTodayScheduled()) {
+                tv.setTextColor(getColor(R.color.status_info));
+            } else {
+                tv.setTextColor(getColor(R.color.text_secondary));
+            }
         } else {
+            tv.setText("Tidak dijadwalkan");
             tv.setTextColor(getColor(R.color.text_hint));
+        }
+    }
+
+    /**
+     * Refresh tampilan jadwal untuk semua valve.
+     */
+    private void refreshAllScheduleDisplays() {
+        for (int i = 1; i <= ValveScheduleManager.VALVE_COUNT; i++) {
+            refreshScheduleDisplay(i);
+        }
+    }
+
+    /**
+     * Dapatkan MaterialSwitch valve berdasarkan index.
+     */
+    private MaterialSwitch getValveSwitch(int valveIndex) {
+        switch (valveIndex) {
+            case 1:
+                return switchKranAir;
+            case 2:
+                return switchKranInsek;
+            case 3:
+                return switchKranPupuk;
+            case 4:
+                return switchKranBuang;
+            default:
+                return switchKranAir;
+        }
+    }
+
+    /**
+     * Dapatkan TextView countdown berdasarkan index valve.
+     */
+    private TextView getCountdownTextView(int valveIndex) {
+        switch (valveIndex) {
+            case 1:
+                return tvCountdownKranAir;
+            case 2:
+                return tvCountdownKranInsek;
+            case 3:
+                return tvCountdownKranPupuk;
+            case 4:
+                return tvCountdownKranBuang;
+            default:
+                return null;
         }
     }
 
@@ -532,50 +600,56 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
         tvPompaTimerStatus.setText("Aktif (otomatis)");
 
         switch (valveIndex) {
-            case 1: layoutKranAirTimerStatus.setVisibility(View.VISIBLE); break;
-            case 2: layoutKranInsekTimerStatus.setVisibility(View.VISIBLE); break;
-            case 3: layoutKranPupukTimerStatus.setVisibility(View.VISIBLE); break;
-            case 4: layoutKranBuangTimerStatus.setVisibility(View.VISIBLE); break;
+            case 1:
+                layoutKranAirTimerStatus.setVisibility(View.VISIBLE);
+                break;
+            case 2:
+                layoutKranInsekTimerStatus.setVisibility(View.VISIBLE);
+                break;
+            case 3:
+                layoutKranPupukTimerStatus.setVisibility(View.VISIBLE);
+                break;
+            case 4:
+                layoutKranBuangTimerStatus.setVisibility(View.VISIBLE);
+                break;
         }
     }
 
     private void updateTimerStatusCard(int valveIndex, String timeStr) {
         switch (valveIndex) {
-            case 1: tvKranAirTimerStatus.setText(timeStr); break;
-            case 2: tvKranInsekTimerStatus.setText(timeStr); break;
-            case 3: tvKranPupukTimerStatus.setText(timeStr); break;
-            case 4: tvKranBuangTimerStatus.setText(timeStr); break;
+            case 1:
+                tvKranAirTimerStatus.setText(timeStr);
+                break;
+            case 2:
+                tvKranInsekTimerStatus.setText(timeStr);
+                break;
+            case 3:
+                tvKranPupukTimerStatus.setText(timeStr);
+                break;
+            case 4:
+                tvKranBuangTimerStatus.setText(timeStr);
+                break;
         }
     }
 
     private void hideTimerStatusRow(int valveIndex) {
         switch (valveIndex) {
-            case 1: layoutKranAirTimerStatus.setVisibility(View.GONE); break;
-            case 2: layoutKranInsekTimerStatus.setVisibility(View.GONE); break;
-            case 3: layoutKranPupukTimerStatus.setVisibility(View.GONE); break;
-            case 4: layoutKranBuangTimerStatus.setVisibility(View.GONE); break;
+            case 1:
+                layoutKranAirTimerStatus.setVisibility(View.GONE);
+                break;
+            case 2:
+                layoutKranInsekTimerStatus.setVisibility(View.GONE);
+                break;
+            case 3:
+                layoutKranPupukTimerStatus.setVisibility(View.GONE);
+                break;
+            case 4:
+                layoutKranBuangTimerStatus.setVisibility(View.GONE);
+                break;
         }
-        // Jika tidak ada valve yang aktif, sembunyikan pompa status juga
-        if (!hasActiveValveTimers()) {
+        if (!scheduleManager.hasActiveTimers()) {
             layoutPompaTimerStatus.setVisibility(View.GONE);
         }
-    }
-
-    private String formatTime(long millis) {
-        long totalSeconds = millis / 1000;
-        long minutes = totalSeconds / 60;
-        long seconds = totalSeconds % 60;
-        return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
-    }
-
-    @Override
-    protected void onDestroy() {
-        // Cancel semua timer yang aktif
-        if (timerKranAir != null) timerKranAir.cancel();
-        if (timerKranInsek != null) timerKranInsek.cancel();
-        if (timerKranPupuk != null) timerKranPupuk.cancel();
-        if (timerKranBuang != null) timerKranBuang.cancel();
-        super.onDestroy();
     }
 
     // ==================== SENSOR MONITORING ====================
@@ -601,8 +675,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
                         "⚠️ Kelembapan Tanah Rendah!",
                         "Kelembapan tanah saat ini " + kelInt + "% (di bawah 40%). "
                                 + "Tanah terlalu kering, segera lakukan penyiraman!",
-                        MediaTanahActivity.class
-                );
+                        MediaTanahActivity.class);
             } else {
                 tvStatusKelembapan.setText("Terlalu Basah");
                 tvStatusKelembapan.setTextColor(getColor(R.color.status_warning));
@@ -612,8 +685,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
                         "⚠️ Kelembapan Tanah Tinggi!",
                         "Kelembapan tanah saat ini " + kelInt + "% (di atas 80%). "
                                 + "Tanah terlalu basah, kurangi penyiraman!",
-                        MediaTanahActivity.class
-                );
+                        MediaTanahActivity.class);
             }
         } catch (NumberFormatException e) {
             Log.e(TAG, "Invalid kelembapan value: " + value);
@@ -640,8 +712,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
                         "⚠️ pH Tanah Terlalu Asam!",
                         "pH tanah saat ini " + ph + " (di bawah 5.5). "
                                 + "Kondisi terlalu asam, pertimbangkan menambahkan kapur!",
-                        MediaTanahActivity.class
-                );
+                        MediaTanahActivity.class);
             } else {
                 tvStatusPH.setText("Basa");
                 tvStatusPH.setTextColor(getColor(R.color.status_warning));
@@ -651,8 +722,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity {
                         "⚠️ pH Tanah Terlalu Basa!",
                         "pH tanah saat ini " + ph + " (di atas 7.5). "
                                 + "Kondisi terlalu basa, pertimbangkan menambahkan pupuk organik!",
-                        MediaTanahActivity.class
-                );
+                        MediaTanahActivity.class);
             }
         } catch (NumberFormatException e) {
             Log.e(TAG, "Invalid pH value: " + value);
