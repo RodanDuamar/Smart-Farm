@@ -114,6 +114,14 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
 
         // Tampilkan info jadwal yang tersimpan di UI
         refreshAllScheduleDisplays();
+
+        // Pastikan semua alarm terdaftar di AlarmManager
+        // (penting jika alarm hilang karena force-stop atau update app)
+        scheduleManager.ensureAlarmsRegistered();
+
+        // Cek apakah ada jadwal yang seharusnya sedang berjalan sekarang
+        // (misal: app dibuka saat jadwal sedang aktif)
+        scheduleManager.checkAndRunTodaySchedules();
     }
 
     @Override
@@ -139,8 +147,19 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        // Refresh tampilan jadwal dan cek jadwal yang mungkin berjalan
+        if (scheduleManager != null) {
+            refreshAllScheduleDisplays();
+            scheduleManager.checkAndRunTodaySchedules();
+        }
+    }
+
+    @Override
     protected void onDestroy() {
-        // Cancel semua timer saat activity dihancurkan
+        // Cancel hanya in-app CountDownTimer, BUKAN alarm AlarmManager.
+        // Jadwal AlarmManager tetap berjalan di background.
         if (scheduleManager != null) {
             scheduleManager.cancelAllTimers();
         }

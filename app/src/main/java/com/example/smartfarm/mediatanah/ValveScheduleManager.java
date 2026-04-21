@@ -49,6 +49,9 @@ public class ValveScheduleManager {
     /** Callback untuk komunikasi ke Activity */
     private final ScheduleCallback callback;
 
+    /** AlarmManager helper untuk scheduling background */
+    private final ScheduleAlarmHelper alarmHelper;
+
     // ==================== CALLBACK INTERFACE ====================
 
     /**
@@ -89,6 +92,7 @@ public class ValveScheduleManager {
         this.schedules = new HashMap<>();
         this.activeTimers = new HashMap<>();
         this.timerActiveFlags = new HashMap<>();
+        this.alarmHelper = new ScheduleAlarmHelper(context);
 
         // Inisialisasi flags
         for (int i = 1; i <= VALVE_COUNT; i++) {
@@ -111,6 +115,10 @@ public class ValveScheduleManager {
         validateIndex(valveIndex);
         schedules.put(valveIndex, config);
         saveSchedule(valveIndex);
+
+        // Daftarkan alarm di AlarmManager agar jalan di background
+        alarmHelper.registerAlarmsForValve(valveIndex, config);
+
         callback.onScheduleUpdated(valveIndex, config);
         Log.d(TAG, "Schedule set for valve " + valveIndex + ": " + config);
     }
@@ -124,6 +132,10 @@ public class ValveScheduleManager {
         validateIndex(valveIndex);
         schedules.remove(valveIndex);
         prefs.edit().remove(KEY_SCHEDULE_PREFIX + valveIndex).apply();
+
+        // Cancel alarm di AlarmManager
+        alarmHelper.cancelAlarmsForValve(valveIndex);
+
         callback.onScheduleUpdated(valveIndex, null);
         Log.d(TAG, "Schedule removed for valve " + valveIndex);
     }
@@ -428,7 +440,9 @@ public class ValveScheduleManager {
     }
 
     /**
-     * Cancel semua timer. Dipanggil saat Activity onDestroy.
+     * Cancel semua in-app timer. Dipanggil saat Activity onDestroy.
+     * CATATAN: Ini TIDAK membatalkan alarm AlarmManager.
+     * Jadwal tetap berjalan di background meskipun Activity dihancurkan.
      */
     public void cancelAllTimers() {
         for (CountDownTimer timer : activeTimers.values()) {
@@ -438,5 +452,20 @@ public class ValveScheduleManager {
         for (int i = 1; i <= VALVE_COUNT; i++) {
             timerActiveFlags.put(i, false);
         }
+    }
+
+    /**
+     * Pastikan semua alarm terdaftar di AlarmManager.
+     * Dipanggil saat app dibuka untuk memastikan alarm tidak hilang.
+     */
+    public void ensureAlarmsRegistered() {
+        alarmHelper.reRegisterAllAlarms();
+    }
+
+    /**
+     * Dapatkan AlarmHelper untuk akses langsung.
+     */
+    public ScheduleAlarmHelper getAlarmHelper() {
+        return alarmHelper;
     }
 }
