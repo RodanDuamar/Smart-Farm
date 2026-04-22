@@ -13,6 +13,7 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.util.Calendar;
+import java.util.List;
 
 /**
  * BroadcastReceiver yang menerima alarm dari AlarmManager.
@@ -42,6 +43,7 @@ public class ScheduleAlarmReceiver extends BroadcastReceiver {
 
         String action = intent.getAction();
         int valveIndex = intent.getIntExtra(ScheduleAlarmHelper.EXTRA_VALVE_INDEX, -1);
+        int scheduleId = intent.getIntExtra(ScheduleAlarmHelper.EXTRA_SCHEDULE_ID, 0);
         int dayOfWeek = intent.getIntExtra(ScheduleAlarmHelper.EXTRA_DAY_OF_WEEK, -1);
 
         if (valveIndex < 1 || valveIndex > ValveScheduleManager.VALVE_COUNT) {
@@ -49,30 +51,33 @@ public class ScheduleAlarmReceiver extends BroadcastReceiver {
             return;
         }
 
-        Log.d(TAG, "Alarm received: action=" + action + " valve=" + valveIndex + " day=" + dayOfWeek);
+        Log.d(TAG, "Alarm received: action=" + action + " valve=" + valveIndex
+                + " schedule=" + scheduleId + " day=" + dayOfWeek);
 
         // Pastikan notification channels sudah dibuat
         NotificationHelper.createNotificationChannels(context);
 
         switch (action) {
             case ScheduleAlarmHelper.ACTION_VALVE_START:
-                handleValveStart(context, valveIndex, dayOfWeek);
+                handleValveStart(context, valveIndex, scheduleId, dayOfWeek);
                 break;
             case ScheduleAlarmHelper.ACTION_VALVE_STOP:
-                handleValveStop(context, valveIndex, dayOfWeek);
+                handleValveStop(context, valveIndex, scheduleId, dayOfWeek);
                 break;
         }
 
         // Re-schedule alarm ini untuk minggu depan
-        rescheduleForNextWeek(context, valveIndex, dayOfWeek, action);
+        rescheduleForNextWeek(context, valveIndex, scheduleId, dayOfWeek, action);
     }
 
     /**
      * Handle START alarm: nyalakan pompa + valve via MQTT.
      */
-    private void handleValveStart(Context context, int valveIndex, int dayOfWeek) {
+    private void handleValveStart(Context context, int valveIndex,
+                                   int scheduleId, int dayOfWeek) {
         String valveName = ValveScheduleManager.getValveName(valveIndex);
-        Log.d(TAG, "Starting valve " + valveIndex + " (" + valveName + ")");
+        Log.d(TAG, "Starting valve " + valveIndex + " (" + valveName
+                + ") schedule " + scheduleId);
 
         // Track state: valve ON
         setValveActiveState(context, valveIndex, true);
@@ -94,6 +99,7 @@ public class ScheduleAlarmReceiver extends BroadcastReceiver {
 
                     Log.d(TAG, "MQTT: Pump ON + " + valveName + " ON");
                 }
+
             } catch (Exception e) {
                 Log.e(TAG, "MQTT error during valve start", e);
             } finally {
@@ -115,9 +121,11 @@ public class ScheduleAlarmReceiver extends BroadcastReceiver {
     /**
      * Handle STOP alarm: matikan valve, cek apakah pompa perlu dimatikan.
      */
-    private void handleValveStop(Context context, int valveIndex, int dayOfWeek) {
+    private void handleValveStop(Context context, int valveIndex,
+                                  int scheduleId, int dayOfWeek) {
         String valveName = ValveScheduleManager.getValveName(valveIndex);
-        Log.d(TAG, "Stopping valve " + valveIndex + " (" + valveName + ")");
+        Log.d(TAG, "Stopping valve " + valveIndex + " (" + valveName
+                + ") schedule " + scheduleId);
 
         // Track state: valve OFF
         setValveActiveState(context, valveIndex, false);
@@ -161,24 +169,35 @@ public class ScheduleAlarmReceiver extends BroadcastReceiver {
     /**
      * Re-schedule alarm untuk minggu depan (karena setExact hanya 1x trigger).
      */
-    private void rescheduleForNextWeek(Context context, int valveIndex, int dayOfWeek, String action) {
+    private void rescheduleForNextWeek(Context context, int valveIndex,
+                                        int scheduleId, int dayOfWeek, String action) {
         // Cek apakah jadwal masih enabled
         SharedPreferences prefs = context.getSharedPreferences("valve_schedules",
                 Context.MODE_PRIVATE);
         String json = prefs.getString("schedule_valve_" + valveIndex, null);
-        ScheduleConfig config = ScheduleConfig.fromJson(json);
+        List<ScheduleConfig> schedules = ScheduleConfig.listFromJson(json);
+
+        // Cari schedule dengan ID yang sesuai
+        ScheduleConfig config = null;
+        for (ScheduleConfig s : schedules) {
+            if (s.getId() == scheduleId) {
+                config = s;
+                break;
+            }
+        }
 
         if (config == null || !config.isEnabled() || !config.isDayScheduled(dayOfWeek)) {
             Log.d(TAG, "Schedule no longer valid, not rescheduling valve "
-                    + valveIndex + " day " + dayOfWeek);
+                    + valveIndex + " schedule " + scheduleId + " day " + dayOfWeek);
             return;
         }
 
         // Daftarkan kembali alarm ini untuk minggu depan
         ScheduleAlarmHelper helper = new ScheduleAlarmHelper(context);
-        helper.registerAlarmsForValve(valveIndex, config);
+        helper.registerAlarmsForSchedule(valveIndex, config);
 
         Log.d(TAG, "Rescheduled alarm for valve " + valveIndex
+                + " schedule " + scheduleId
                 + " day " + dayOfWeek + " for next week");
     }
 

@@ -9,19 +9,21 @@ import android.os.Build;
 import android.util.Log;
 
 import java.util.Calendar;
+import java.util.List;
 import java.util.Set;
 
 /**
  * Helper untuk mengelola AlarmManager scheduling.
  *
- * Setiap valve bisa punya jadwal harian (beberapa hari dalam seminggu).
+ * Setiap valve bisa punya MULTIPLE jadwal (max 10 per valve).
+ * Setiap jadwal bisa punya beberapa hari dalam seminggu.
  * Setiap jadwal menghasilkan 2 alarm per hari:
  *   - Alarm START: menyalakan valve + pompa
  *   - Alarm END:   mematikan valve (+ pompa jika tidak ada valve lain aktif)
  *
- * Request code formula:
- *   START alarm: (valveIndex * 100) + (dayOfWeek * 10) + 1
- *   END alarm:   (valveIndex * 100) + (dayOfWeek * 10) + 2
+ * Request code formula (mendukung multiple schedules):
+ *   START alarm: (valveIndex * 1000) + (scheduleId * 100) + (dayOfWeek * 10) + 1
+ *   END alarm:   (valveIndex * 1000) + (scheduleId * 100) + (dayOfWeek * 10) + 2
  *
  * Ini memastikan setiap alarm punya request code unik.
  */
@@ -35,6 +37,7 @@ public class ScheduleAlarmHelper {
 
     /** Intent extra keys */
     public static final String EXTRA_VALVE_INDEX = "valve_index";
+    public static final String EXTRA_SCHEDULE_ID = "schedule_id";
     public static final String EXTRA_DAY_OF_WEEK = "day_of_week";
 
     private final Context context;
@@ -48,40 +51,71 @@ public class ScheduleAlarmHelper {
     // ==================== PUBLIC API ====================
 
     /**
-     * Daftarkan semua alarm untuk satu valve berdasarkan ScheduleConfig.
-     * Akan cancel alarm lama terlebih dahulu.
+     * Daftarkan semua alarm untuk SATU jadwal (ScheduleConfig) dari satu valve.
      *
      * @param valveIndex Index valve (1-4)
      * @param config     Konfigurasi jadwal
      */
-    public void registerAlarmsForValve(int valveIndex, ScheduleConfig config) {
-        // Cancel semua alarm lama untuk valve ini
-        cancelAlarmsForValve(valveIndex);
-
+    public void registerAlarmsForSchedule(int valveIndex, ScheduleConfig config) {
         if (config == null || !config.isEnabled() || !config.hasDaysSelected()
                 || !config.hasValidDuration()) {
             Log.d(TAG, "Skipping alarm registration for valve " + valveIndex
+                    + " schedule " + (config != null ? config.getId() : "null")
                     + ": config invalid or disabled");
             return;
         }
 
+        int scheduleId = config.getId();
         Set<Integer> days = config.getSelectedDays();
         for (int day : days) {
-            scheduleStartAlarm(valveIndex, day, config.getStartHour(), config.getStartMinute());
-            scheduleEndAlarm(valveIndex, day, config.getEndHour(), config.getEndMinute());
+            scheduleStartAlarm(valveIndex, scheduleId, day,
+                    config.getStartHour(), config.getStartMinute());
+            scheduleEndAlarm(valveIndex, scheduleId, day,
+                    config.getEndHour(), config.getEndMinute());
         }
 
         Log.d(TAG, "Registered alarms for valve " + valveIndex
+                + " schedule " + scheduleId
                 + ": " + days.size() + " days, time " + config.getTimeRangeDisplayText());
     }
 
     /**
-     * Cancel semua alarm untuk satu valve (semua hari).
+     * Cancel semua alarm untuk SATU jadwal (ScheduleConfig).
+     *
+     * @param valveIndex Index valve (1-4)
+     * @param config     Konfigurasi jadwal yang akan di-cancel
+     */
+    public void cancelAlarmsForSchedule(int valveIndex, ScheduleConfig config) {
+        if (config == null) return;
+        int scheduleId = config.getId();
+        for (int day = Calendar.SUNDAY; day <= Calendar.SATURDAY; day++) {
+            cancelAlarm(getStartRequestCode(valveIndex, scheduleId, day));
+            cancelAlarm(getEndRequestCode(valveIndex, scheduleId, day));
+        }
+        Log.d(TAG, "Cancelled alarms for valve " + valveIndex + " schedule " + scheduleId);
+    }
+
+    /**
+     * Daftarkan semua alarm untuk satu valve (semua jadwalnya).
+     * Backward compatibility method.
+     *
+     * @param valveIndex Index valve (1-4)
+     * @param config     Konfigurasi jadwal (single)
+     */
+    public void registerAlarmsForValve(int valveIndex, ScheduleConfig config) {
+        registerAlarmsForSchedule(valveIndex, config);
+    }
+
+    /**
+     * Cancel semua alarm untuk satu valve (semua schedules, semua hari).
      */
     public void cancelAlarmsForValve(int valveIndex) {
-        for (int day = Calendar.SUNDAY; day <= Calendar.SATURDAY; day++) {
-            cancelAlarm(getStartRequestCode(valveIndex, day));
-            cancelAlarm(getEndRequestCode(valveIndex, day));
+        // Cancel all possible schedule ids (0-9) dan semua hari
+        for (int scheduleId = 0; scheduleId < ValveScheduleManager.MAX_SCHEDULES_PER_VALVE; scheduleId++) {
+            for (int day = Calendar.SUNDAY; day <= Calendar.SATURDAY; day++) {
+                cancelAlarm(getStartRequestCode(valveIndex, scheduleId, day));
+                cancelAlarm(getEndRequestCode(valveIndex, scheduleId, day));
+            }
         }
         Log.d(TAG, "Cancelled all alarms for valve " + valveIndex);
     }
@@ -107,9 +141,11 @@ public class ScheduleAlarmHelper {
 
         for (int i = 1; i <= ValveScheduleManager.VALVE_COUNT; i++) {
             String json = prefs.getString("schedule_valve_" + i, null);
-            ScheduleConfig config = ScheduleConfig.fromJson(json);
-            if (config != null && config.isEnabled()) {
-                registerAlarmsForValve(i, config);
+            List<ScheduleConfig> schedules = ScheduleConfig.listFromJson(json);
+            for (ScheduleConfig config : schedules) {
+                if (config.isEnabled()) {
+                    registerAlarmsForSchedule(i, config);
+                }
             }
         }
         Log.d(TAG, "Re-registered all alarms from saved schedules");
@@ -118,37 +154,43 @@ public class ScheduleAlarmHelper {
     // ==================== INTERNAL ====================
 
     /**
-     * Schedule alarm START untuk valve pada hari tertentu.
+     * Schedule alarm START untuk valve + jadwal pada hari tertentu.
      */
-    private void scheduleStartAlarm(int valveIndex, int dayOfWeek, int hour, int minute) {
-        int requestCode = getStartRequestCode(valveIndex, dayOfWeek);
+    private void scheduleStartAlarm(int valveIndex, int scheduleId,
+                                     int dayOfWeek, int hour, int minute) {
+        int requestCode = getStartRequestCode(valveIndex, scheduleId, dayOfWeek);
         Intent intent = new Intent(context, ScheduleAlarmReceiver.class);
         intent.setAction(ACTION_VALVE_START);
         intent.putExtra(EXTRA_VALVE_INDEX, valveIndex);
+        intent.putExtra(EXTRA_SCHEDULE_ID, scheduleId);
         intent.putExtra(EXTRA_DAY_OF_WEEK, dayOfWeek);
 
         long triggerTimeMs = getNextTriggerTime(dayOfWeek, hour, minute);
         setWeeklyAlarm(requestCode, intent, triggerTimeMs);
 
         Log.d(TAG, "Scheduled START alarm: valve=" + valveIndex
+                + " schedule=" + scheduleId
                 + " day=" + dayOfWeek + " time=" + hour + ":" + minute
                 + " requestCode=" + requestCode);
     }
 
     /**
-     * Schedule alarm END untuk valve pada hari tertentu.
+     * Schedule alarm END untuk valve + jadwal pada hari tertentu.
      */
-    private void scheduleEndAlarm(int valveIndex, int dayOfWeek, int hour, int minute) {
-        int requestCode = getEndRequestCode(valveIndex, dayOfWeek);
+    private void scheduleEndAlarm(int valveIndex, int scheduleId,
+                                   int dayOfWeek, int hour, int minute) {
+        int requestCode = getEndRequestCode(valveIndex, scheduleId, dayOfWeek);
         Intent intent = new Intent(context, ScheduleAlarmReceiver.class);
         intent.setAction(ACTION_VALVE_STOP);
         intent.putExtra(EXTRA_VALVE_INDEX, valveIndex);
+        intent.putExtra(EXTRA_SCHEDULE_ID, scheduleId);
         intent.putExtra(EXTRA_DAY_OF_WEEK, dayOfWeek);
 
         long triggerTimeMs = getNextTriggerTime(dayOfWeek, hour, minute);
         setWeeklyAlarm(requestCode, intent, triggerTimeMs);
 
         Log.d(TAG, "Scheduled END alarm: valve=" + valveIndex
+                + " schedule=" + scheduleId
                 + " day=" + dayOfWeek + " time=" + hour + ":" + minute
                 + " requestCode=" + requestCode);
     }
@@ -224,17 +266,17 @@ public class ScheduleAlarmHelper {
 
     /**
      * Generate request code unik untuk alarm START.
-     * Formula: (valveIndex * 100) + (dayOfWeek * 10) + 1
+     * Formula: (valveIndex * 1000) + (scheduleId * 100) + (dayOfWeek * 10) + 1
      */
-    private int getStartRequestCode(int valveIndex, int dayOfWeek) {
-        return (valveIndex * 100) + (dayOfWeek * 10) + 1;
+    private int getStartRequestCode(int valveIndex, int scheduleId, int dayOfWeek) {
+        return (valveIndex * 1000) + (scheduleId * 100) + (dayOfWeek * 10) + 1;
     }
 
     /**
      * Generate request code unik untuk alarm END.
-     * Formula: (valveIndex * 100) + (dayOfWeek * 10) + 2
+     * Formula: (valveIndex * 1000) + (scheduleId * 100) + (dayOfWeek * 10) + 2
      */
-    private int getEndRequestCode(int valveIndex, int dayOfWeek) {
-        return (valveIndex * 100) + (dayOfWeek * 10) + 2;
+    private int getEndRequestCode(int valveIndex, int scheduleId, int dayOfWeek) {
+        return (valveIndex * 1000) + (scheduleId * 100) + (dayOfWeek * 10) + 2;
     }
 }

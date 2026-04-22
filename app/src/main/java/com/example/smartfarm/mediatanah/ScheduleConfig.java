@@ -6,8 +6,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -15,23 +17,29 @@ import java.util.Set;
  * Model class yang merepresentasikan konfigurasi jadwal satu valve.
  *
  * Menyimpan:
+ * - ID unik jadwal
  * - Hari-hari yang dijadwalkan (Set of Calendar day constants)
  * - Jam mulai dan jam selesai (rentang waktu menyala)
  * - Status aktif/nonaktif
  *
  * Mendukung serialisasi JSON untuk penyimpanan di SharedPreferences.
+ * Mendukung multiple schedules per valve via List serialisasi.
  */
 public class ScheduleConfig {
 
     private static final String TAG = "ScheduleConfig";
 
     // JSON keys
+    private static final String KEY_ID = "id";
     private static final String KEY_DAYS = "days";
     private static final String KEY_START_HOUR = "start_hour";
     private static final String KEY_START_MINUTE = "start_minute";
     private static final String KEY_END_HOUR = "end_hour";
     private static final String KEY_END_MINUTE = "end_minute";
     private static final String KEY_ENABLED = "enabled";
+
+    /** ID unik jadwal (0-based, auto-increment per valve) */
+    private int id;
 
     /** Hari-hari yang dipilih (Calendar.SUNDAY=1 .. Calendar.SATURDAY=7) */
     private final Set<Integer> selectedDays;
@@ -63,6 +71,7 @@ public class ScheduleConfig {
      * Buat jadwal baru dengan default (kosong, 08:00-08:30, disabled).
      */
     public ScheduleConfig() {
+        this.id = 0;
         this.selectedDays = new LinkedHashSet<>();
         this.startHour = 8;
         this.startMinute = 0;
@@ -83,6 +92,7 @@ public class ScheduleConfig {
      */
     public ScheduleConfig(Set<Integer> selectedDays, int startHour, int startMinute,
             int endHour, int endMinute, boolean enabled) {
+        this.id = 0;
         this.selectedDays = new LinkedHashSet<>(selectedDays);
         this.startHour = startHour;
         this.startMinute = startMinute;
@@ -92,6 +102,14 @@ public class ScheduleConfig {
     }
 
     // ==================== GETTERS & SETTERS ====================
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
 
     public Set<Integer> getSelectedDays() {
         return selectedDays;
@@ -328,6 +346,7 @@ public class ScheduleConfig {
     public JSONObject toJson() {
         try {
             JSONObject json = new JSONObject();
+            json.put(KEY_ID, id);
             JSONArray daysArray = new JSONArray();
             for (int day : selectedDays) {
                 daysArray.put(day);
@@ -346,7 +365,7 @@ public class ScheduleConfig {
     }
 
     /**
-     * Buat ScheduleConfig dari JSON string.
+     * Buat ScheduleConfig dari JSON string (single object).
      *
      * @param jsonString String JSON yang disimpan di SharedPreferences
      * @return ScheduleConfig atau null jika gagal parse
@@ -357,7 +376,20 @@ public class ScheduleConfig {
         }
         try {
             JSONObject json = new JSONObject(jsonString);
+            return fromJsonObject(json);
+        } catch (JSONException e) {
+            Log.e(TAG, "Error parsing JSON: " + jsonString, e);
+            return null;
+        }
+    }
+
+    /**
+     * Buat ScheduleConfig dari JSONObject.
+     */
+    public static ScheduleConfig fromJsonObject(JSONObject json) {
+        try {
             ScheduleConfig config = new ScheduleConfig();
+            config.setId(json.optInt(KEY_ID, 0));
 
             JSONArray daysArray = json.optJSONArray(KEY_DAYS);
             if (daysArray != null) {
@@ -374,15 +406,71 @@ public class ScheduleConfig {
 
             return config;
         } catch (JSONException e) {
-            Log.e(TAG, "Error parsing JSON: " + jsonString, e);
+            Log.e(TAG, "Error parsing JSONObject", e);
             return null;
         }
+    }
+
+    // ==================== LIST SERIALISASI (MULTI-SCHEDULE) ====================
+
+    /**
+     * Konversi list of ScheduleConfig ke JSON string untuk penyimpanan.
+     */
+    public static String listToJson(List<ScheduleConfig> schedules) {
+        try {
+            JSONArray array = new JSONArray();
+            for (ScheduleConfig config : schedules) {
+                array.put(config.toJson());
+            }
+            return array.toString();
+        } catch (Exception e) {
+            Log.e(TAG, "Error converting list to JSON", e);
+            return "[]";
+        }
+    }
+
+    /**
+     * Buat list of ScheduleConfig dari JSON string (array).
+     * Juga backward-compatible: jika JSON adalah object tunggal (format lama),
+     * akan di-wrap menjadi list dengan 1 item.
+     *
+     * @param jsonString String JSON (array atau object) dari SharedPreferences
+     * @return List of ScheduleConfig, atau empty list jika gagal parse
+     */
+    public static List<ScheduleConfig> listFromJson(String jsonString) {
+        List<ScheduleConfig> list = new ArrayList<>();
+        if (jsonString == null || jsonString.isEmpty()) {
+            return list;
+        }
+        try {
+            jsonString = jsonString.trim();
+            if (jsonString.startsWith("[")) {
+                // Format baru: JSON Array
+                JSONArray array = new JSONArray(jsonString);
+                for (int i = 0; i < array.length(); i++) {
+                    ScheduleConfig config = fromJsonObject(array.getJSONObject(i));
+                    if (config != null) {
+                        list.add(config);
+                    }
+                }
+            } else if (jsonString.startsWith("{")) {
+                // Format lama: single JSON Object - backward compatibility
+                ScheduleConfig config = fromJson(jsonString);
+                if (config != null) {
+                    list.add(config);
+                }
+            }
+        } catch (JSONException e) {
+            Log.e(TAG, "Error parsing JSON list: " + jsonString, e);
+        }
+        return list;
     }
 
     @Override
     public String toString() {
         return "ScheduleConfig{" +
-                "days=" + getDaysDisplayText() +
+                "id=" + id +
+                ", days=" + getDaysDisplayText() +
                 ", time=" + getTimeRangeDisplayText() +
                 ", enabled=" + enabled +
                 '}';

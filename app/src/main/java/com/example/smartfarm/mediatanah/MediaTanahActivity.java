@@ -16,11 +16,13 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 
 import com.example.smartfarm.R;
 import com.example.smartfarm.base.BaseSmartFarmActivity;
 import com.example.smartfarm.base.NotificationHelper;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -28,6 +30,7 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 
 import java.util.Calendar;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -39,6 +42,7 @@ import java.util.Set;
  * - Monitoring sensor (kelembapan, pH)
  * - Notifikasi peringatan kondisi abnormal
  * - Penjadwalan valve per hari dengan durasi (+ pompa otomatis)
+ * - MULTIPLE jadwal per valve (tambah, edit, hapus)
  *
  * Desain OOP:
  * - Scheduling logic didelegasikan ke ValveScheduleManager
@@ -81,6 +85,12 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
 
     /** Manager yang mengelola semua scheduling & timer logic */
     private ValveScheduleManager scheduleManager;
+
+    // ==================== ACTIVE DIALOG REFERENCES ====================
+
+    /** Reference ke dialog daftar jadwal yang sedang terbuka (untuk refresh) */
+    private AlertDialog activeScheduleListDialog;
+    private int activeScheduleListValveIndex = -1;
 
     // ==================== PERMISSION ====================
 
@@ -262,20 +272,19 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     }
 
     private void setupTimerButtons() {
-        btnTimerKranAir.setOnClickListener(v -> showScheduleDialog("Kran Air", 1));
-        btnTimerKranInsek.setOnClickListener(v -> showScheduleDialog("Kran Insektisida", 2));
-        btnTimerKranPupuk.setOnClickListener(v -> showScheduleDialog("Kran Pupuk", 3));
-        btnTimerKranBuang.setOnClickListener(v -> showScheduleDialog("Kran Pembuangan", 4));
+        btnTimerKranAir.setOnClickListener(v -> showScheduleListDialog("Kran Air", 1));
+        btnTimerKranInsek.setOnClickListener(v -> showScheduleListDialog("Kran Insektisida", 2));
+        btnTimerKranPupuk.setOnClickListener(v -> showScheduleListDialog("Kran Pupuk", 3));
+        btnTimerKranBuang.setOnClickListener(v -> showScheduleListDialog("Kran Pembuangan", 4));
     }
 
-    // ==================== SCHEDULING DIALOG ====================
+    // ==================== SCHEDULE LIST DIALOG (MULTI-SCHEDULE) ====================
 
     /**
-     * Menampilkan dialog penjadwalan untuk valve tertentu.
-     * Jika valve sudah punya timer aktif, tanyakan apakah ingin dihentikan.
-     * Jika sudah punya jadwal, pre-fill dialog dengan jadwal yang ada.
+     * Menampilkan dialog daftar jadwal untuk valve tertentu.
+     * Dari sini user bisa: melihat semua jadwal, menambah, mengedit, menghapus, enable/disable.
      */
-    private void showScheduleDialog(String valveName, int valveIndex) {
+    private void showScheduleListDialog(String valveName, int valveIndex) {
         // Jika timer sedang berjalan, tawarkan opsi hentikan
         if (scheduleManager.isTimerActive(valveIndex)) {
             new MaterialAlertDialogBuilder(this)
@@ -285,14 +294,171 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
                         scheduleManager.stopValve(valveIndex);
                         Toast.makeText(this, "Timer " + valveName + " dihentikan",
                                 Toast.LENGTH_SHORT).show();
+                        // Tampilkan dialog jadwal setelah timer dihentikan
+                        showScheduleListDialogInternal(valveName, valveIndex);
                     })
                     .setNegativeButton("Batal", null)
                     .show();
             return;
         }
 
-        // Inflate dialog layout baru
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_set_schedule, null);
+        showScheduleListDialogInternal(valveName, valveIndex);
+    }
+
+    /**
+     * Internal: build & show dialog daftar jadwal.
+     */
+    private void showScheduleListDialogInternal(String valveName, int valveIndex) {
+        View dialogView = LayoutInflater.from(this)
+                .inflate(R.layout.dialog_schedule_list, null);
+
+        // Bind title
+        TextView tvTitle = dialogView.findViewById(R.id.tvDialogListTitle);
+        TextView tvSubtitle = dialogView.findViewById(R.id.tvDialogListSubtitle);
+        tvTitle.setText("Jadwal " + valveName);
+        tvSubtitle.setText("Kelola jadwal penyiraman " + valveName.toLowerCase());
+
+        LinearLayout layoutScheduleList = dialogView.findViewById(R.id.layoutScheduleList);
+        LinearLayout layoutEmptyState = dialogView.findViewById(R.id.layoutEmptyState);
+        MaterialButton btnAddSchedule = dialogView.findViewById(R.id.btnAddSchedule);
+
+        // Build dialog
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setView(dialogView)
+                .setNegativeButton("Tutup", null)
+                .create();
+
+        // Simpan reference untuk refresh
+        activeScheduleListDialog = dialog;
+        activeScheduleListValveIndex = valveIndex;
+
+        // Populate list
+        populateScheduleList(layoutScheduleList, layoutEmptyState, valveName, valveIndex, dialog);
+
+        // Add schedule button
+        btnAddSchedule.setOnClickListener(v -> {
+            List<ScheduleConfig> list = scheduleManager.getScheduleList(valveIndex);
+            if (list.size() >= ValveScheduleManager.MAX_SCHEDULES_PER_VALVE) {
+                Toast.makeText(this, "Maksimal "
+                        + ValveScheduleManager.MAX_SCHEDULES_PER_VALVE
+                        + " jadwal per valve", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            showAddEditScheduleDialog(valveName, valveIndex, null, () -> {
+                // Refresh list setelah jadwal ditambah
+                populateScheduleList(layoutScheduleList, layoutEmptyState,
+                        valveName, valveIndex, dialog);
+            });
+        });
+
+        dialog.setOnDismissListener(d -> {
+            activeScheduleListDialog = null;
+            activeScheduleListValveIndex = -1;
+        });
+
+        dialog.show();
+    }
+
+    /**
+     * Populate (atau refresh) daftar jadwal di dialog list.
+     */
+    private void populateScheduleList(LinearLayout container, LinearLayout emptyState,
+                                       String valveName, int valveIndex, AlertDialog parentDialog) {
+        container.removeAllViews();
+        List<ScheduleConfig> schedules = scheduleManager.getScheduleList(valveIndex);
+
+        if (schedules.isEmpty()) {
+            emptyState.setVisibility(View.VISIBLE);
+            container.setVisibility(View.GONE);
+            return;
+        }
+
+        emptyState.setVisibility(View.GONE);
+        container.setVisibility(View.VISIBLE);
+
+        for (int i = 0; i < schedules.size(); i++) {
+            ScheduleConfig config = schedules.get(i);
+            View itemView = LayoutInflater.from(this)
+                    .inflate(R.layout.item_schedule, container, false);
+
+            TextView tvTime = itemView.findViewById(R.id.tvScheduleTime);
+            TextView tvDays = itemView.findViewById(R.id.tvScheduleDays);
+            MaterialSwitch switchEnabled = itemView.findViewById(R.id.switchScheduleEnabled);
+            ImageView btnDelete = itemView.findViewById(R.id.btnDeleteSchedule);
+
+            // Set data
+            tvTime.setText(config.getTimeRangeDisplayText());
+            tvDays.setText(config.getDaysDisplayText());
+            switchEnabled.setChecked(config.isEnabled());
+
+            // Dimmed styling jika disabled
+            float alpha = config.isEnabled() ? 1.0f : 0.5f;
+            tvTime.setAlpha(alpha);
+            tvDays.setAlpha(alpha);
+
+            // Klik item -> edit jadwal
+            final int scheduleId = config.getId();
+            itemView.setOnClickListener(v -> {
+                ScheduleConfig editConfig = scheduleManager.getScheduleById(valveIndex, scheduleId);
+                if (editConfig != null) {
+                    showAddEditScheduleDialog(valveName, valveIndex, editConfig, () -> {
+                        populateScheduleList(container, emptyState,
+                                valveName, valveIndex, parentDialog);
+                    });
+                }
+            });
+
+            // Toggle enable/disable
+            switchEnabled.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                ScheduleConfig toggleConfig = scheduleManager.getScheduleById(valveIndex, scheduleId);
+                if (toggleConfig != null) {
+                    toggleConfig.setEnabled(isChecked);
+                    scheduleManager.updateSchedule(valveIndex, toggleConfig);
+                    // Update styling
+                    float newAlpha = isChecked ? 1.0f : 0.5f;
+                    tvTime.setAlpha(newAlpha);
+                    tvDays.setAlpha(newAlpha);
+                }
+            });
+
+            // Delete button
+            btnDelete.setOnClickListener(v -> {
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle("Hapus Jadwal")
+                        .setMessage("Hapus jadwal " + config.getTimeRangeDisplayText() + "?")
+                        .setPositiveButton("Hapus", (dialog, which) -> {
+                            scheduleManager.removeSchedule(valveIndex, scheduleId);
+                            populateScheduleList(container, emptyState,
+                                    valveName, valveIndex, parentDialog);
+                            Toast.makeText(this, "Jadwal dihapus",
+                                    Toast.LENGTH_SHORT).show();
+                        })
+                        .setNegativeButton("Batal", null)
+                        .show();
+            });
+
+            container.addView(itemView);
+        }
+    }
+
+    // ==================== ADD/EDIT SCHEDULE DIALOG ====================
+
+    /**
+     * Menampilkan dialog untuk menambah atau mengedit satu jadwal.
+     *
+     * @param valveName    Nama valve untuk judul
+     * @param valveIndex   Index valve (1-4)
+     * @param existingConfig Jadwal yang diedit, atau null untuk jadwal baru
+     * @param onSaved      Callback yang dipanggil setelah jadwal disimpan
+     */
+    private void showAddEditScheduleDialog(String valveName, int valveIndex,
+                                            ScheduleConfig existingConfig,
+                                            Runnable onSaved) {
+        boolean isEdit = (existingConfig != null);
+
+        // Inflate dialog layout
+        View dialogView = LayoutInflater.from(this)
+                .inflate(R.layout.dialog_set_schedule, null);
 
         // Bind views
         TextView tvTitle = dialogView.findViewById(R.id.tvDialogTitle);
@@ -323,15 +489,15 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
                 { chipMinggu.getId(), Calendar.SUNDAY }
         };
 
-        Chip[] allChips = { chipSenin, chipSelasa, chipRabu, chipKamis, chipJumat, chipSabtu, chipMinggu };
+        Chip[] allChips = { chipSenin, chipSelasa, chipRabu, chipKamis,
+                chipJumat, chipSabtu, chipMinggu };
 
         // Setup title
-        tvTitle.setText("Atur Jadwal " + valveName);
+        tvTitle.setText(isEdit ? "Edit Jadwal " + valveName : "Tambah Jadwal " + valveName);
         tvSubtitle.setText("Pompa akan otomatis menyala bersama " + valveName);
 
-        // Pre-fill jika sudah ada jadwal tersimpan
-        ScheduleConfig existingConfig = scheduleManager.getSchedule(valveIndex);
-        if (existingConfig != null) {
+        // Pre-fill jika edit
+        if (isEdit) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 timePickerStart.setHour(existingConfig.getStartHour());
                 timePickerStart.setMinute(existingConfig.getStartMinute());
@@ -355,10 +521,10 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             }
         }
 
-        // Build & show dialog dengan 3 tombol
-        new MaterialAlertDialogBuilder(this)
+        // Build & show dialog
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
                 .setView(dialogView)
-                .setPositiveButton("Simpan Jadwal", (dialog, which) -> {
+                .setPositiveButton("Simpan", (dialog, which) -> {
                     int startHour, startMinute, endHour, endMinute;
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         startHour = timePickerStart.getHour();
@@ -391,70 +557,100 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
                         return;
                     }
 
-                    // Buat dan simpan jadwal baru
-                    ScheduleConfig config = new ScheduleConfig(selectedDays, startHour, startMinute, endHour, endMinute, true);
-                    
+                    // Buat config
+                    ScheduleConfig config = new ScheduleConfig(
+                            selectedDays, startHour, startMinute, endHour, endMinute, true);
+
                     if (!config.hasValidDuration()) {
-                        Toast.makeText(this, "Jam mulai as dan jam selesai tidak boleh sama", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Jam mulai dan jam selesai tidak boleh sama",
+                                Toast.LENGTH_SHORT).show();
                         return;
                     }
 
-                    scheduleManager.setSchedule(valveIndex, config);
-
-                    Toast.makeText(this,
-                            "✅ Jadwal " + valveName + " disimpan: " + config.getDaysDisplayText()
-                                    + " • " + config.getTimeRangeDisplayText(),
-                            Toast.LENGTH_LONG).show();
-                })
-                .setNeutralButton("Jalankan Sekarang", (dialog, which) -> {
-                    int startHour, startMinute, endHour, endMinute;
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        startHour = timePickerStart.getHour();
-                        startMinute = timePickerStart.getMinute();
-                        endHour = timePickerEnd.getHour();
-                        endMinute = timePickerEnd.getMinute();
+                    if (isEdit) {
+                        // Update jadwal yang ada
+                        config.setId(existingConfig.getId());
+                        scheduleManager.updateSchedule(valveIndex, config);
+                        Toast.makeText(this,
+                                "✅ Jadwal diperbarui: " + config.getTimeRangeDisplayText(),
+                                Toast.LENGTH_SHORT).show();
                     } else {
-                        startHour = timePickerStart.getCurrentHour();
-                        startMinute = timePickerStart.getCurrentMinute();
-                        endHour = timePickerEnd.getCurrentHour();
-                        endMinute = timePickerEnd.getCurrentMinute();
+                        // Tambah jadwal baru
+                        scheduleManager.addSchedule(valveIndex, config);
+                        Toast.makeText(this,
+                                "✅ Jadwal ditambahkan: " + config.getDaysDisplayText()
+                                        + " • " + config.getTimeRangeDisplayText(),
+                                Toast.LENGTH_SHORT).show();
                     }
 
-                    // Simpan juga hari yang dipilih (jika ada)
-                    Set<Integer> selectedDays = new LinkedHashSet<>();
-                    for (Chip chip : allChips) {
-                        if (chip.isChecked()) {
-                            for (int[] mapping : chipDayMap) {
-                                if (mapping[0] == chip.getId()) {
-                                    selectedDays.add(mapping[1]);
-                                    break;
-                                }
+                    // Callback refresh
+                    if (onSaved != null) {
+                        onSaved.run();
+                    }
+                })
+                .setNegativeButton("Batal", null);
+
+        // Tambahkan tombol "Jalankan Sekarang" hanya untuk jadwal baru
+        if (!isEdit) {
+            builder.setNeutralButton("Jalankan Sekarang", (dialog, which) -> {
+                int startHour, startMinute, endHour, endMinute;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    startHour = timePickerStart.getHour();
+                    startMinute = timePickerStart.getMinute();
+                    endHour = timePickerEnd.getHour();
+                    endMinute = timePickerEnd.getMinute();
+                } else {
+                    startHour = timePickerStart.getCurrentHour();
+                    startMinute = timePickerStart.getCurrentMinute();
+                    endHour = timePickerEnd.getCurrentHour();
+                    endMinute = timePickerEnd.getCurrentMinute();
+                }
+
+                Set<Integer> selectedDays = new LinkedHashSet<>();
+                for (Chip chip : allChips) {
+                    if (chip.isChecked()) {
+                        for (int[] mapping : chipDayMap) {
+                            if (mapping[0] == chip.getId()) {
+                                selectedDays.add(mapping[1]);
+                                break;
                             }
                         }
                     }
+                }
 
-                    // Simpan config (enabled hanya jika ada hari dipilih)
-                    ScheduleConfig config = new ScheduleConfig(
-                            selectedDays, startHour, startMinute, endHour, endMinute, !selectedDays.isEmpty());
-                    
-                    if (!config.hasValidDuration()) {
-                        Toast.makeText(this, "Jam mulai as dan jam selesai tidak boleh sama", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+                ScheduleConfig config = new ScheduleConfig(
+                        selectedDays, startHour, startMinute, endHour, endMinute,
+                        !selectedDays.isEmpty());
 
-                    scheduleManager.setSchedule(valveIndex, config);
-
-                    // Langsung jalankan timer sekarang
-                    long totalMs = config.getTotalDurationMs();
-                    scheduleManager.startValveWithDuration(valveIndex, totalMs);
-                    showTimerStatusCard(valveIndex);
-
-                    Toast.makeText(this,
-                            "⏱ " + valveName + " dimulai: " + ValveScheduleManager.formatTime(totalMs),
+                if (!config.hasValidDuration()) {
+                    Toast.makeText(this, "Jam mulai dan jam selesai tidak boleh sama",
                             Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("Batal", null)
-                .show();
+                    return;
+                }
+
+                // Simpan jadwal (jika ada hari dipilih)
+                if (!selectedDays.isEmpty()) {
+                    scheduleManager.addSchedule(valveIndex, config);
+                }
+
+                // Langsung jalankan timer sekarang
+                long totalMs = config.getTotalDurationMs();
+                scheduleManager.startValveWithDuration(valveIndex, totalMs);
+                showTimerStatusCard(valveIndex);
+
+                // Tutup dialog list juga
+                if (activeScheduleListDialog != null) {
+                    activeScheduleListDialog.dismiss();
+                }
+
+                Toast.makeText(this,
+                        "⏱ " + valveName + " dimulai: "
+                                + ValveScheduleManager.formatTime(totalMs),
+                        Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        builder.show();
     }
 
     /**
@@ -543,27 +739,35 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
 
     /**
      * Refresh tampilan jadwal untuk satu valve.
+     * Menampilkan ringkasan dari semua jadwal valve.
      */
     private void refreshScheduleDisplay(int valveIndex) {
         if (scheduleManager.isTimerActive(valveIndex)) {
             return; // Jangan overwrite countdown yang sedang jalan
         }
 
-        ScheduleConfig config = scheduleManager.getSchedule(valveIndex);
         TextView tv = getCountdownTextView(valveIndex);
         if (tv == null)
             return;
 
-        if (config != null && config.isEnabled() && config.hasDaysSelected()) {
-            tv.setText(config.getSummaryText());
-            // Highlight jika hari ini termasuk jadwal
-            if (config.isTodayScheduled()) {
-                tv.setTextColor(getColor(R.color.status_info));
-            } else {
-                tv.setTextColor(getColor(R.color.text_secondary));
+        String summary = scheduleManager.getScheduleSummaryText(valveIndex);
+        tv.setText(summary);
+
+        // Determine color
+        List<ScheduleConfig> list = scheduleManager.getScheduleList(valveIndex);
+        boolean hasActiveToday = false;
+        for (ScheduleConfig config : list) {
+            if (config.isEnabled() && config.isTodayScheduled()) {
+                hasActiveToday = true;
+                break;
             }
+        }
+
+        if (hasActiveToday) {
+            tv.setTextColor(getColor(R.color.status_info));
+        } else if (!list.isEmpty() && scheduleManager.hasSchedule(valveIndex)) {
+            tv.setTextColor(getColor(R.color.text_secondary));
         } else {
-            tv.setText("Tidak dijadwalkan");
             tv.setTextColor(getColor(R.color.text_hint));
         }
     }
