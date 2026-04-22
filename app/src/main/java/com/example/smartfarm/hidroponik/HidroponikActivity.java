@@ -1,217 +1,159 @@
 package com.example.smartfarm.hidroponik;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.os.Build;
+import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.util.Log;
-import android.widget.ProgressBar;
+import android.os.Handler;
+import android.view.MotionEvent;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.Switch;
 import android.widget.TextView;
-
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.core.content.ContextCompat;
+import android.widget.Toast;
 
 import com.example.smartfarm.R;
 import com.example.smartfarm.base.BaseSmartFarmActivity;
-import com.example.smartfarm.base.NotificationHelper;
-import com.google.android.material.materialswitch.MaterialSwitch;
 
-/**
- * Activity untuk sistem monitoring Hidroponik.
- * Extends BaseSmartFarmActivity untuk reuse MQTT logic.
- *
- * Monitoring:
- * - pH Air (ideal: 5.5 - 6.5)
- * - Nutrisi Air / TDS (ideal: 800 - 1500 PPM)
- *
- * Fitur notifikasi: mengirim peringatan ketika kondisi sensor abnormal.
- */
+import org.json.JSONObject;
+
 public class HidroponikActivity extends BaseSmartFarmActivity {
 
-    private static final String TAG = "Hidroponik";
+    private TextView tvTdsRealtime, tvPhRealtime, tvModeStatus;
+    private TextView btnPompaA, btnPompaB, btnPompaAir, btnUpdateParameter;
+    private EditText etPpmTarget, etPpmTargetMax;
+    private LinearLayout layoutManualControl, layoutParameter;
+    @SuppressLint("UseSwitchCompatOrMaterialCode")
+    private Switch switchAuto;
 
-    private TextView tvNutrisiAir, tvPhAir, tvStatusPhAir, tvStatusNutrisiAir;
-    private ProgressBar progressPhAir, progressNutrisiAir, progressVitaminA, progressVitaminB;
-//    private MaterialSwitch switchNutrisiAir, switchLarutan;
-
-    // Permission launcher untuk Android 13+
-    private final ActivityResultLauncher<String> notificationPermissionLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                if (isGranted) {
-                    Log.d(TAG, "Notification permission granted");
-                } else {
-                    Log.w(TAG, "Notification permission denied");
-                }
-            });
+    private final Handler handler = new Handler();
+    private Runnable safetyTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_hidroponik);
 
-        // Setup notifikasi
-        NotificationHelper.createNotificationChannels(this);
-        requestNotificationPermission();
-
-        setupMQTT();
         initViews();
-//        setupSwitchListeners();
+        setupMQTT();
+        setupModeControl();
+        setupPumpActions();
+
+        // Initial state sync
+        updateUIState(switchAuto.isChecked());
     }
 
-    @Override
-    protected String getClientId() {
-        return "AndroidSmartFarm_Hidroponik";
+    private void initViews() {
+        tvTdsRealtime = findViewById(R.id.tvTdsRealtime);
+        tvPhRealtime = findViewById(R.id.tvPhRealtime);
+        tvModeStatus = findViewById(R.id.tvModeStatus);
+
+        btnPompaA = findViewById(R.id.btnPompaA);
+        btnPompaB = findViewById(R.id.btnPompaB);
+        btnPompaAir = findViewById(R.id.btnPompaAir);
+        btnUpdateParameter = findViewById(R.id.btnUpdateParameter);
+
+        etPpmTarget = findViewById(R.id.etPpmTarget);
+        etPpmTargetMax = findViewById(R.id.etPpmTargetMax);
+
+        layoutManualControl = findViewById(R.id.layoutManualControl);
+        layoutParameter = findViewById(R.id.layoutParameter);
+        switchAuto = findViewById(R.id.switchAuto);
     }
 
-    @Override
-    protected String getSubscriptionTopic() {
-        return "smartfarm/hidroponik/#";
+    private void setupModeControl() {
+        switchAuto.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            tvModeStatus.setText(isChecked ? "OTOMATIS" : "MANUAL");
+            updateUIState(isChecked);
+
+            try {
+                JSONObject json = new JSONObject();
+                json.put("auto", isChecked);
+                publishMQTT("nutrisi/control", json.toString());
+
+                if (isChecked) sendPumpCommand(false, false, false);
+            } catch (Exception e) { e.printStackTrace(); }
+        });
+
+        btnUpdateParameter.setOnClickListener(v -> {
+            String min = etPpmTarget.getText().toString();
+            String max = etPpmTargetMax.getText().toString();
+            if (min.isEmpty() || max.isEmpty()) return;
+
+            try {
+                JSONObject json = new JSONObject();
+                json.put("min", Integer.parseInt(min));
+                json.put("max", Integer.parseInt(max));
+                publishMQTT("nutrisi/set/ppm", json.toString());
+                Toast.makeText(this, "Target PPM Disimpan", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) { e.printStackTrace(); }
+        });
+    }
+
+    private void updateUIState(boolean isAuto) {
+        boolean manualEnabled = !isAuto;
+        float alpha = manualEnabled ? 1.0f : 0.4f;
+
+        // Kunci Kontrol Manual
+        layoutManualControl.setAlpha(alpha);
+        btnPompaA.setEnabled(manualEnabled);
+        btnPompaB.setEnabled(manualEnabled);
+        btnPompaAir.setEnabled(manualEnabled);
+
+        // Kunci Input Parameter
+        layoutParameter.setAlpha(alpha);
+        etPpmTarget.setEnabled(manualEnabled);
+        etPpmTargetMax.setEnabled(manualEnabled);
+        btnUpdateParameter.setEnabled(manualEnabled);
+
+        if (isAuto) {
+            Toast.makeText(this, "Mode Otomatis Aktif: Manual Dikunci", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupPumpActions() {
+        btnPompaA.setOnTouchListener((v, event) -> handleTouch(event, v, true, false, false));
+        btnPompaB.setOnTouchListener((v, event) -> handleTouch(event, v, false, true, false));
+        btnPompaAir.setOnTouchListener((v, event) -> handleTouch(event, v, false, false, true));
+    }
+
+    private boolean handleTouch(MotionEvent event, android.view.View v, boolean pA, boolean pB, boolean pAir) {
+        if (!v.isEnabled()) return false;
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            v.setPressed(true);
+            sendPumpCommand(pA, pB, pAir);
+            safetyTask = () -> sendPumpCommand(false, false, false);
+            handler.postDelayed(safetyTask, 30000);
+            return true;
+        } else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
+            v.setPressed(false);
+            sendPumpCommand(false, false, false);
+            handler.removeCallbacks(safetyTask);
+            return true;
+        }
+        return false;
+    }
+
+    private void sendPumpCommand(boolean a, boolean b, boolean air) {
+        try {
+            JSONObject json = new JSONObject();
+            json.put("dosing1", a);
+            json.put("dosing2", b);
+            json.put("water_pump", air);
+            publishMQTT("nutrisi/control", json.toString());
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     @Override
     protected void onMqttMessageReceived(String topic, String payload) {
-        switch (topic) {
-            case "smartfarm/hidroponik/nutrisi_air":
-                updateNutrisiAir(payload);
-                break;
-            case "smartfarm/hidroponik/larutan":
-                updatePhAir(payload);
-                break;
-            default:
-                Log.w(TAG, "Unknown topic: " + topic);
-                break;
-        }
+        runOnUiThread(() -> {
+            try {
+                JSONObject json = new JSONObject(payload);
+                tvTdsRealtime.setText(String.valueOf(json.optInt("ppm", 0)));
+                tvPhRealtime.setText(String.format("%.2f", json.optDouble("ph", 0.0)));
+            } catch (Exception e) { e.printStackTrace(); }
+        });
     }
 
-    /**
-     * Meminta izin notification untuk Android 13 (API 33) ke atas.
-     */
-    private void requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
-            }
-        }
-    }
-
-    private void initViews() {
-        tvPhAir = findViewById(R.id.tvPhAir);
-        tvNutrisiAir = findViewById(R.id.tvNutrisiAir);
-        progressPhAir = findViewById(R.id.progressPhAir);
-        progressNutrisiAir = findViewById(R.id.progressNutrisiAir);
-        tvStatusPhAir = findViewById(R.id.tvStatusPhAir);
-        tvStatusNutrisiAir = findViewById(R.id.tvStatusNutrisiAir);
-
-//        progressVitaminA = findViewById(R.id.progressVitaminA);
-//        progressVitaminB = findViewById(R.id.progressVitaminB);
-    }
-
-//    private void setupSwitchListeners() {
-//        switchNutrisiAir.setOnCheckedChangeListener((buttonView, isChecked) -> {
-//            publishMQTT("smartfarm/kontrol/nutrisi_air", isChecked ? "ON" : "OFF");
-//        });
-//
-//        switchLarutan.setOnCheckedChangeListener((buttonView, isChecked) -> {
-//            publishMQTT("smartfarm/kontrol/larutan", isChecked ? "ON" : "OFF");
-//        });
-//    }
-
-
-    private void updatePhAir(String payload) {
-        try {
-            float pH = Float.parseFloat(payload);
-            tvPhAir.setText(String.valueOf(pH));
-            progressPhAir.setProgress(Math.round(pH * 10));
-
-            if (pH >= 5.5 && pH <= 6.5) {
-                tvStatusPhAir.setText("Ideal");
-                tvStatusPhAir.setTextColor(getColor(R.color.status_good));
-
-                // Kondisi kembali normal, hapus notifikasi sebelumnya
-                NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_PH_AIR_ASAM);
-                NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_PH_AIR_BASA);
-
-            } else if (pH < 5.5) {
-                tvStatusPhAir.setText("Asam");
-                tvStatusPhAir.setTextColor(getColor(R.color.status_danger));
-
-                // Kirim notifikasi peringatan pH air asam
-                NotificationHelper.sendWarningNotification(
-                        this,
-                        NotificationHelper.CHANNEL_HIDROPONIK,
-                        NotificationHelper.NOTIF_PH_AIR_ASAM,
-                        "⚠️ pH Air Hidroponik Asam!",
-                        "pH air saat ini " + pH + " (di bawah 5.5). "
-                                + "Kondisi terlalu asam, tambahkan larutan pH Up!",
-                        HidroponikActivity.class
-                );
-            } else {
-                tvStatusPhAir.setText("Basa");
-                tvStatusPhAir.setTextColor(getColor(R.color.status_warning));
-
-                // Kirim notifikasi peringatan pH air basa
-                NotificationHelper.sendWarningNotification(
-                        this,
-                        NotificationHelper.CHANNEL_HIDROPONIK,
-                        NotificationHelper.NOTIF_PH_AIR_BASA,
-                        "⚠️ pH Air Hidroponik Basa!",
-                        "pH air saat ini " + pH + " (di atas 6.5). "
-                                + "Kondisi terlalu basa, tambahkan larutan pH Down!",
-                        HidroponikActivity.class
-                );
-            }
-        } catch (NumberFormatException e) {
-            Log.e(TAG, "Invalid pH Air value: " + payload);
-        }
-    }
-
-    private void updateNutrisiAir(String payload) {
-        try {
-            float nutrisi = Float.parseFloat(payload);
-            tvNutrisiAir.setText(String.valueOf(nutrisi));
-            progressNutrisiAir.setProgress(Math.round(nutrisi));
-
-            if (nutrisi >= 800 && nutrisi <= 1500) {
-                tvStatusNutrisiAir.setText("Ideal");
-                tvStatusNutrisiAir.setTextColor(getColor(R.color.status_good));
-
-                // Kondisi kembali normal, hapus notifikasi sebelumnya
-                NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_NUTRISI_KURANG);
-                NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_NUTRISI_BERLEBIH);
-
-            } else if (nutrisi < 800) {
-                tvStatusNutrisiAir.setText("Kurang Nutrisi");
-                tvStatusNutrisiAir.setTextColor(getColor(R.color.status_danger));
-
-                // Kirim notifikasi peringatan nutrisi kurang
-                NotificationHelper.sendWarningNotification(
-                        this,
-                        NotificationHelper.CHANNEL_HIDROPONIK,
-                        NotificationHelper.NOTIF_NUTRISI_KURANG,
-                        "⚠️ Nutrisi Air Rendah!",
-                        "Nutrisi air saat ini " + Math.round(nutrisi) + " PPM (di bawah 800 PPM). "
-                                + "Kadar nutrisi terlalu rendah, tambahkan larutan nutrisi AB Mix!",
-                        HidroponikActivity.class
-                );
-            } else {
-                tvStatusNutrisiAir.setText("Berlebihan Nutrisi");
-                tvStatusNutrisiAir.setTextColor(getColor(R.color.status_warning));
-
-                // Kirim notifikasi peringatan nutrisi berlebih
-                NotificationHelper.sendWarningNotification(
-                        this,
-                        NotificationHelper.CHANNEL_HIDROPONIK,
-                        NotificationHelper.NOTIF_NUTRISI_BERLEBIH,
-                        "⚠️ Nutrisi Air Berlebihan!",
-                        "Nutrisi air saat ini " + Math.round(nutrisi) + " PPM (di atas 1500 PPM). "
-                                + "Kadar nutrisi terlalu tinggi, encerkan dengan menambahkan air bersih!",
-                        HidroponikActivity.class
-                );
-            }
-        } catch (NumberFormatException e) {
-            Log.e(TAG, "Invalid Nutrisi value: " + payload);
-        }
-    }
+    @Override protected String getSubscriptionTopic() { return "nutrisi/sensor"; }
+    @Override protected String getClientId() { return "SmartFarm_" + System.currentTimeMillis(); }
 }
