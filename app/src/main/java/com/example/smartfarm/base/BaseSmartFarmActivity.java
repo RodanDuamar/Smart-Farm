@@ -5,93 +5,111 @@ import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
-import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
-/**
- * Abstract base class untuk semua Activity SmartFarm.
- * Menyediakan shared MQTT connection logic yang bisa di-reuse oleh sub-class.
- */
 public abstract class BaseSmartFarmActivity extends AppCompatActivity {
 
-    private static final String TAG = "BaseSmartFarm";
-    private static final String BROKER_URL = "tcp://broker.emqx.io:1883";
+    private static final String TAG        = "BaseSmartFarm";
+    private static final String BROKER_URL = "tcp://broker.hivemq.com:1883";
 
-    protected MqttClient mqttClient;
+    // Ganti MqttClient -> MqttAsyncClient agar tidak blokir UI thread
+    protected MqttAsyncClient mqttClient;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
+    protected abstract String   getClientId();
+    protected abstract String[] getSubscriptionTopics();
+    protected abstract void     onMqttMessageReceived(String topic, String payload);
+    protected void onMqttConnected() {}
 
-    /**
-     * Setiap sub-class harus menentukan Client ID MQTT unik.
-     */
-    protected abstract String getClientId();
-
-    /**
-     * Setiap sub-class menentukan topic yang akan di-subscribe.
-     */
-    protected abstract String getSubscriptionTopic();
-
-    /**
-     * Callback saat pesan MQTT diterima. Sub-class harus meng-handle message.
-     */
-    protected abstract void onMqttMessageReceived(String topic, String payload);
-
-    /**
-     * Setup koneksi MQTT dengan broker, subscribe ke topic, dan set callback.
-     */
     protected void setupMQTT() {
         try {
-            mqttClient = new MqttClient(BROKER_URL, getClientId(), null);
+            // MemoryPersistence agar tidak perlu storage permission
+            mqttClient = new MqttAsyncClient(BROKER_URL, getClientId(), new MemoryPersistence());
+
             MqttConnectOptions options = new MqttConnectOptions();
-            options.setUserName("ardana_garden");
-            options.setPassword("rahasia1234".toCharArray());
             options.setCleanSession(true);
+            options.setAutomaticReconnect(true);
+            options.setConnectionTimeout(10);
+            options.setKeepAliveInterval(60);
 
-            mqttClient.connect(options);
-
+            // Set callback SEBELUM connect
             mqttClient.setCallback(new MqttCallback() {
                 @Override
                 public void connectionLost(Throwable cause) {
-                    Log.w(TAG, "MQTT connection lost", cause);
+                    Log.w(TAG, "Koneksi terputus: " + cause.getMessage());
                 }
 
                 @Override
                 public void messageArrived(String topic, MqttMessage message) {
                     String payload = new String(message.getPayload());
+                    Log.d(TAG, "Pesan masuk [" + topic + "]: " + payload);
+                    // Pastikan update UI di main thread
                     runOnUiThread(() -> onMqttMessageReceived(topic, payload));
                 }
 
                 @Override
-                public void deliveryComplete(IMqttDeliveryToken token) {
+                public void deliveryComplete(IMqttDeliveryToken token) {}
+            });
+
+            // Connect secara async — tidak blokir UI thread
+            mqttClient.connect(options, null, new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    Log.d(TAG, "MQTT Connected!");
+                    // Subscribe setelah connect berhasil
+                    subscribeToTopics();
+                    runOnUiThread(() -> onMqttConnected());
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    Log.e(TAG, "MQTT Connect gagal: " + exception.getMessage());
                 }
             });
 
-            mqttClient.subscribe(getSubscriptionTopic());
-            Log.d(TAG, "MQTT connected, subscribed to: " + getSubscriptionTopic());
-
         } catch (Exception e) {
-            Log.e(TAG, "MQTT setup failed", e);
+            Log.e(TAG, "MQTT setup failed: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Publish pesan ke topic MQTT tertentu.
-     */
+    // Subscribe dipanggil setelah connect berhasil (bukan sebelum)
+    private void subscribeToTopics() {
+        try {
+            for (String topic : getSubscriptionTopics()) {
+                mqttClient.subscribe(topic, 1, null, new IMqttActionListener() {
+                    @Override
+                    public void onSuccess(IMqttToken asyncActionToken) {
+                        Log.d(TAG, "Subscribe OK: " + topic);
+                    }
+                    @Override
+                    public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                        Log.e(TAG, "Subscribe gagal: " + topic + " - " + exception.getMessage());
+                    }
+                });
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Subscribe error: " + e.getMessage(), e);
+        }
+    }
+
     protected void publishMQTT(String topic, String msg) {
         try {
             if (mqttClient != null && mqttClient.isConnected()) {
                 MqttMessage message = new MqttMessage(msg.getBytes());
-                message.setQos(0);
+                message.setQos(1);
                 mqttClient.publish(topic, message);
+                Log.d(TAG, "Publish [" + topic + "]: " + msg);
+            } else {
+                Log.w(TAG, "Publish gagal: MQTT belum terkoneksi");
             }
         } catch (Exception e) {
-            Log.e(TAG, "MQTT publish failed", e);
+            Log.e(TAG, "Publish failed: " + e.getMessage(), e);
         }
     }
 
@@ -101,9 +119,10 @@ public abstract class BaseSmartFarmActivity extends AppCompatActivity {
         try {
             if (mqttClient != null && mqttClient.isConnected()) {
                 mqttClient.disconnect();
+                Log.d(TAG, "MQTT Disconnected");
             }
         } catch (Exception e) {
-            Log.e(TAG, "MQTT disconnect failed", e);
+            e.printStackTrace();
         }
     }
 }

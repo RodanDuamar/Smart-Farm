@@ -1,572 +1,266 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F9F5"
-    tools:context=".hidroponik.HidroponikActivity">
+    android:background="#F5F7FA">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="20dp">
 
-        <!-- ==================== HEADER SECTION ==================== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Dashboard Hidroponik"
+            android:textColor="#1A237E"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:text="Monitoring &amp; Kontrol Nutrisi"
+            android:textColor="#78909C"
+            android:textSize="14sp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_horizontal"
-            android:background="@drawable/bg_header_gradient"
-            android:paddingTop="48dp"
-            android:paddingBottom="32dp">
+            android:layout_marginBottom="20dp"
+            android:orientation="horizontal">
 
-            <!-- App Logo Icon -->
-            <FrameLayout
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:background="@drawable/bg_icon_circle_blue">
-
-                <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_hydroponics"
-                    android:contentDescription="Hidroponik Logo" />
-            </FrameLayout>
-
-            <!-- Title -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Smart Hidroponik"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:textColor="#00695C"
-                android:layout_marginTop="12dp" />
-
-            <!-- Subtitle -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Sistem IoT &amp; Solar Powered"
-                android:textSize="14sp"
-                android:textColor="#757575"
-                android:layout_marginTop="4dp" />
-
-            <!-- Connection Status -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_card_hidroponik"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp">
-
-                <View
-                    android:id="@+id/viewConnectionDot"
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:background="@drawable/bg_icon_circle_green" />
-
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_neumorph_card"
+                android:elevation="4dp"
+                android:padding="16dp"
+                android:orientation="vertical">
                 <TextView
-                    android:id="@+id/tvConnectionStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Terhubung"
+                    android:text="TDS (ppm)"
+                    android:textColor="#546E7A"
                     android:textSize="12sp"
-                    android:textColor="#4CAF50"
-                    android:layout_marginStart="6dp" />
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tvTdsRealtime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#2E7D32"
+                    android:textSize="32sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_neumorph_card"
+                android:elevation="4dp"
+                android:padding="16dp"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="pH Air"
+                    android:textColor="#546E7A"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tvPhRealtime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.00"
+                    android:textColor="#1976D2"
+                    android:textSize="32sp"
+                    android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>
 
-        <!-- ==================== CONTENT SECTION ==================== -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:background="@drawable/bg_neumorph_card"
+            android:elevation="4dp"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Mode Operasi Sistem"
+                        android:textColor="#000000"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/tvModeStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="MANUAL"
+                        android:textColor="#1A237E"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+                <Switch
+                    android:id="@+id/switchAuto"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:thumbTint="#000000"
+                    android:trackTint="#000000" />
+            </RelativeLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layoutManualControl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:background="@drawable/bg_neumorph_card"
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- ============ SECTION TITLE: Monitoring Sensor ============ -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📊 Monitoring Sensor"
-                android:textSize="18sp"
+                android:layout_marginBottom="12dp"
+                android:text="Kontrol Manual Pompa"
+                android:textColor="#263238"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:orientation="horizontal">
+                <TextView
+                    android:id="@+id/btnPompaA"
+                    android:layout_width="0dp"
+                    android:layout_height="55dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_neumorph_card"
+                    android:gravity="center"
+                    android:text="POMPA A"
+                    android:textColor="#2E7D32"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"/>
+                <TextView
+                    android:id="@+id/btnPompaB"
+                    android:layout_width="0dp"
+                    android:layout_height="55dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_neumorph_card"
+                    android:gravity="center"
+                    android:text="POMPA B"
+                    android:textColor="#1976D2"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/btnPompaAir"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:background="@drawable/bg_neumorph_card"
+                android:gravity="center"
+                android:text="POMPA AIR UTAMA"
+                android:textColor="#0097A7"
                 android:textStyle="bold"
-                android:textColor="#1B1F1B"
-                android:layout_marginBottom="12dp" />
+                android:clickable="true"
+                android:focusable="true"/>
 
-            <!-- ============ CARD 1: pH Air ============ -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                android:layout_marginBottom="12dp">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="20dp">
-
-                    <!-- Title -->
-                    <TextView
-                        android:id="@+id/labelPhAir"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="pH Air"
-                        android:textSize="14sp"
-                        android:textColor="#757575"
-                        android:layout_alignParentStart="true"
-                        android:layout_alignParentTop="true" />
-
-                    <!-- Subtitle / info -->
-                    <TextView
-                        android:id="@+id/labelPhAirInfo"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Ideal: 5.5 - 6.5"
-                        android:textSize="11sp"
-                        android:textColor="#9E9E9E"
-                        android:layout_below="@id/labelPhAir"
-                        android:layout_marginTop="2dp" />
-
-                    <!-- Icon -->
-                    <FrameLayout
-                        android:id="@+id/iconPhAir"
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:layout_alignParentEnd="true"
-                        android:layout_alignParentTop="true"
-                        android:background="@drawable/bg_icon_circle_purple">
-
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_ph_meter"
-                            android:contentDescription="pH Icon" />
-                    </FrameLayout>
-
-                    <!-- Value -->
-                    <TextView
-                        android:id="@+id/tvPhAir"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_below="@id/labelPhAirInfo"
-                        android:layout_marginTop="8dp"
-                        android:text="6.2"
-                        android:textSize="40sp"
-                        android:textStyle="bold"
-                        android:textColor="#1B1F1B" />
-
-                    <!-- Progress Bar (skala 0-14) -->
-                    <ProgressBar
-                        android:id="@+id/progressPhAir"
-                        style="@android:style/Widget.ProgressBar.Horizontal"
-                        android:layout_width="match_parent"
-                        android:layout_height="8dp"
-                        android:layout_below="@id/tvPhAir"
-                        android:layout_marginTop="12dp"
-                        android:max="140"
-                        android:progress="62"
-                        android:progressDrawable="@drawable/progress_bar_purple" />
-
-                    <!-- Scale labels -->
-                    <RelativeLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_below="@id/progressPhAir"
-                        android:layout_marginTop="6dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0 (Asam)"
-                            android:textSize="11sp"
-                            android:textColor="#9E9E9E"
-                            android:layout_alignParentStart="true" />
-
-                        <!-- Status indicator -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_centerHorizontal="true"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <View
-                                android:layout_width="8dp"
-                                android:layout_height="8dp"
-                                android:background="@drawable/bg_icon_circle_green" />
-
-                            <TextView
-                                android:id="@+id/tvStatusPhAir"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Ideal"
-                                android:textSize="12sp"
-                                android:textColor="#4CAF50"
-                                android:layout_marginStart="4dp" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="14 (Basa)"
-                            android:textSize="11sp"
-                            android:textColor="#9E9E9E"
-                            android:layout_alignParentEnd="true" />
-                    </RelativeLayout>
-                </RelativeLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- ============ CARD 2: Nutrisi Air (PPM / TDS) ============ -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                android:layout_marginBottom="12dp">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="20dp">
-
-                    <!-- Title -->
-                    <TextView
-                        android:id="@+id/labelNutrisiAir"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Nutrisi Air (PPM)"
-                        android:textSize="14sp"
-                        android:textColor="#757575"
-                        android:layout_alignParentStart="true"
-                        android:layout_alignParentTop="true" />
-
-                    <!-- Subtitle -->
-                    <TextView
-                        android:id="@+id/labelNutrisiAirInfo"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Ideal: 800 - 1500 PPM"
-                        android:textSize="11sp"
-                        android:textColor="#9E9E9E"
-                        android:layout_below="@id/labelNutrisiAir"
-                        android:layout_marginTop="2dp" />
-
-                    <!-- Icon -->
-                    <FrameLayout
-                        android:id="@+id/iconNutrisiAir"
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:layout_alignParentEnd="true"
-                        android:layout_alignParentTop="true"
-                        android:background="@drawable/bg_icon_circle_green">
-
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_gravity="center"
-                            android:src="@drawable/ic_water_drop"
-                            android:contentDescription="Nutrisi Icon" />
-                    </FrameLayout>
-
-                    <!-- Value -->
-                    <LinearLayout
-                        android:id="@+id/valueNutrisiAir"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_below="@id/labelNutrisiAirInfo"
-                        android:layout_marginTop="8dp"
-                        android:orientation="horizontal"
-                        android:baselineAligned="true">
-
-                        <TextView
-                            android:id="@+id/tvNutrisiAir"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="1150"
-                            android:textSize="40sp"
-                            android:textStyle="bold"
-                            android:textColor="#1B1F1B" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text=" PPM"
-                            android:textSize="16sp"
-                            android:textColor="#757575" />
-                    </LinearLayout>
-
-                    <!-- Progress Bar (skala 0-2000) -->
-                    <ProgressBar
-                        android:id="@+id/progressNutrisiAir"
-                        style="@android:style/Widget.ProgressBar.Horizontal"
-                        android:layout_width="match_parent"
-                        android:layout_height="8dp"
-                        android:layout_below="@id/valueNutrisiAir"
-                        android:layout_marginTop="12dp"
-                        android:max="2000"
-                        android:progress="1150"
-                        android:progressDrawable="@drawable/progress_bar_green" />
-
-                    <!-- Scale labels -->
-                    <RelativeLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_below="@id/progressNutrisiAir"
-                        android:layout_marginTop="6dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentStart="true"
-                            android:text="0"
-                            android:textColor="#9E9E9E"
-                            android:textSize="12sp" />
-
-                        <!-- Optimal indicator -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_centerHorizontal="true"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <View
-                                android:layout_width="8dp"
-                                android:layout_height="8dp"
-                                android:background="@drawable/bg_icon_circle_green" />
-
-                            <TextView
-                                android:id="@+id/tvStatusNutrisiAir"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="4dp"
-                                android:text="Ideal"
-                                android:textColor="#4CAF50"
-                                android:textSize="12sp" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:text="2000"
-                            android:textColor="#9E9E9E"
-                            android:textSize="12sp" />
-                    </RelativeLayout>
-                </RelativeLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- ============ ROW: 2 Cards Side-by-Side ============ -->
-
-
-            <!-- ============ CARD 5: Vitamin A & B Monitoring ============ -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                android:layout_marginBottom="16dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <!-- Card Header -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="16dp">
-
-                        <FrameLayout
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            android:background="@drawable/bg_icon_circle_orange">
-
-                            <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_vitamin"
-                                android:contentDescription="Vitamin Icon" />
-                        </FrameLayout>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Vitamin / Nutrisi AB Mix"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:textColor="#1B1F1B"
-                            android:layout_marginStart="10dp" />
-                    </LinearLayout>
-
-                    <!-- Divider -->
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="#F0F0F0"
-                        android:layout_marginBottom="12dp" />
-
-                    <!-- ====== Vitamin A Row ====== -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginBottom="16dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Nutrisi A"
-                                android:textSize="14sp"
-                                android:textColor="#424242" />
-
-                            <TextView
-                                android:id="@+id/tvVitaminA"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="750 ml"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:textColor="#FF9800" />
-                        </LinearLayout>
-
-                        <ProgressBar
-                            android:id="@+id/progressVitaminA"
-                            style="@android:style/Widget.ProgressBar.Horizontal"
-                            android:layout_width="match_parent"
-                            android:layout_height="6dp"
-                            android:layout_marginTop="8dp"
-                            android:max="1000"
-                            android:progress="750"
-                            android:progressDrawable="@drawable/progress_bar_orange" />
-
-                        <TextView
-                            android:id="@+id/tvStatusVitaminA"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Stok cukup"
-                            android:textSize="11sp"
-                            android:textColor="#4CAF50"
-                            android:layout_marginTop="4dp" />
-                    </LinearLayout>
-
-                    <!-- ====== Vitamin B Row ====== -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Nutrisi B"
-                                android:textSize="14sp"
-                                android:textColor="#424242" />
-
-                            <TextView
-                                android:id="@+id/tvVitaminB"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="300 ml"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:textColor="#FF5722" />
-                        </LinearLayout>
-
-                        <ProgressBar
-                            android:id="@+id/progressVitaminB"
-                            style="@android:style/Widget.ProgressBar.Horizontal"
-                            android:layout_width="match_parent"
-                            android:layout_height="6dp"
-                            android:layout_marginTop="8dp"
-                            android:max="1000"
-                            android:progress="300"
-                            android:progressDrawable="@drawable/progress_bar_orange" />
-
-                        <TextView
-                            android:id="@+id/tvStatusVitaminB"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="⚠ Stok rendah, segera isi ulang!"
-                            android:textSize="11sp"
-                            android:textColor="#FF5722"
-                            android:layout_marginTop="4dp" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-
-
-            <!-- ============ CARD 7: Terakhir Diperbarui ============ -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="1dp"
-                android:layout_marginBottom="24dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Terakhir diperbarui:"
-                        android:textSize="13sp"
-                        android:textColor="#9E9E9E" />
-
-                    <TextView
-                        android:id="@+id/tvLastUpdate"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="02 Apr 2026, 10:05"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:textColor="#424242" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
+                android:layout_marginTop="8dp"
+                android:layout_gravity="center"
+                android:text="* Sekali tap untuk On/Off"
+                android:textColor="#90A4AE"
+                android:textSize="10sp" />
         </LinearLayout>
 
-    </LinearLayout>
+        <LinearLayout
+            android:id="@+id/layoutParameter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_neumorph_card"
+            android:orientation="vertical"
+            android:padding="16dp">
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="Pengaturan Target PPM"
+                android:textColor="#263238"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <EditText
+                    android:id="@+id/etPpmTarget"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_neumorph_card"
+                    android:gravity="center"
+                    android:hint="Min"
+                    android:textColorHint="#263238"
+                    android:inputType="number"
+                    android:textColor="#000000"
+                    android:padding="8dp"/>
+                <EditText
+                    android:id="@+id/etPpmTargetMax"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_neumorph_card"
+                    android:gravity="center"
+                    android:hint="Max"
+                    android:textColorHint="#263238"
+                    android:inputType="number"
+                    android:textColor="#000000"
+                    android:padding="8dp"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/btnUpdateParameter"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/bg_neumorph_card"
+                android:backgroundTint="#5C6BC0"
+                android:gravity="center"
+                android:text="SIMPAN KONFIGURASI"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true"/>
+        </LinearLayout>
+    </LinearLayout>
 </androidx.core.widget.NestedScrollView>

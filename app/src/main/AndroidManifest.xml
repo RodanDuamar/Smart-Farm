@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -19,7 +19,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SmartFarm">
 
-        <!-- Menu Selection (Launcher) -->
         <activity
             android:name=".menu.MenuSelectionActivity"
             android:exported="true">
@@ -29,14 +28,15 @@
             </intent-filter>
         </activity>
 
-        <!-- Media Tanah -->
+        <activity
+            android:name=".hidroponik.HidroponikActivity"
+            android:exported="false" />
         <activity
             android:name=".mediatanah.MediaTanahActivity"
             android:exported="false" />
 
-        <!-- Hidroponik -->
         <activity
-            android:name=".hidroponik.HidroponikActivity"
+            android:name=".base.BaseSmartFarmActivity"
             android:exported="false" />
 
         <!-- Schedule Alarm Receiver: menerima alarm untuk valve ON/OFF -->
