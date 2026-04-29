@@ -122,9 +122,14 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     }
 
     @Override
-    protected String getSubscriptionTopic() {
-        return "smartfarm/sensor/#";
+    protected String[] getSubscriptionTopics() {
+        return new String[]{
+                "smartfarm/sensor/kelembapan",
+                "smartfarm/sensor/ph",
+                "mediatanah/status"  // Tambahkan ini agar sinkron dengan ESP32
+        };
     }
+
 
     @Override
     protected void onMqttMessageReceived(String topic, String payload) {

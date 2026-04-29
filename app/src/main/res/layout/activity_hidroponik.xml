@@ -39,8 +39,8 @@
                 android:layout_weight="1"
                 android:background="@drawable/bg_neumorph_card"
                 android:elevation="4dp"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="16dp"
+                android:orientation="vertical">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -65,8 +65,8 @@
                 android:layout_weight="1"
                 android:background="@drawable/bg_neumorph_card"
                 android:elevation="4dp"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="16dp"
+                android:orientation="vertical">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -105,7 +105,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Mode Operasi Sistem"
-                        android:textColor="#78909C"
+                        android:textColor="#000000"
                         android:textSize="11sp"
                         android:textStyle="bold" />
                     <TextView
@@ -123,8 +123,8 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
-                    android:thumbTint="#4CAF50"
-                    android:trackTint="#C8E6C9" />
+                    android:thumbTint="#000000"
+                    android:trackTint="#000000" />
             </RelativeLayout>
         </LinearLayout>
 
@@ -158,24 +158,24 @@
                     android:layout_marginEnd="8dp"
                     android:layout_weight="1"
                     android:background="@drawable/bg_neumorph_card"
-                    android:elevation="2dp"
                     android:gravity="center"
                     android:text="POMPA A"
                     android:textColor="#2E7D32"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"/>
                 <TextView
                     android:id="@+id/btnPompaB"
                     android:layout_width="0dp"
                     android:layout_height="55dp"
                     android:layout_weight="1"
                     android:background="@drawable/bg_neumorph_card"
-                    android:elevation="2dp"
                     android:gravity="center"
                     android:text="POMPA B"
                     android:textColor="#1976D2"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"/>
             </LinearLayout>
 
             <TextView
@@ -183,12 +183,21 @@
                 android:layout_width="match_parent"
                 android:layout_height="55dp"
                 android:background="@drawable/bg_neumorph_card"
-                android:elevation="2dp"
                 android:gravity="center"
                 android:text="POMPA AIR UTAMA"
                 android:textColor="#0097A7"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_gravity="center"
+                android:text="* Sekali tap untuk On/Off"
+                android:textColor="#90A4AE"
+                android:textSize="10sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -221,8 +230,10 @@
                     android:background="@drawable/bg_neumorph_card"
                     android:gravity="center"
                     android:hint="Min"
+                    android:textColorHint="#263238"
                     android:inputType="number"
-                    android:textSize="16sp" />
+                    android:textColor="#000000"
+                    android:padding="8dp"/>
                 <EditText
                     android:id="@+id/etPpmTargetMax"
                     android:layout_width="0dp"
@@ -231,8 +242,10 @@
                     android:background="@drawable/bg_neumorph_card"
                     android:gravity="center"
                     android:hint="Max"
+                    android:textColorHint="#263238"
                     android:inputType="number"
-                    android:textSize="16sp" />
+                    android:textColor="#000000"
+                    android:padding="8dp"/>
             </LinearLayout>
 
             <TextView
@@ -242,12 +255,12 @@
                 android:layout_marginTop="20dp"
                 android:background="@drawable/bg_neumorph_card"
                 android:backgroundTint="#5C6BC0"
-                android:elevation="4dp"
                 android:gravity="center"
-                android:text="SIMPAN CONFIG"
+                android:text="SIMPAN KONFIGURASI"
                 android:textColor="#FFFFFF"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true"/>
         </LinearLayout>
-
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
