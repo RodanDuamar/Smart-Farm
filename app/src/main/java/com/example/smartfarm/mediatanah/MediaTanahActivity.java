@@ -139,10 +139,28 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
 
     /**
      * Subscribe ke sensor data + jadwal state + valve status dari MCU.
+     * Menggunakan wildcard "smartfarm/#" agar menerima semua sub-topic.
      */
     @Override
-    protected String getSubscriptionTopic() {
-        return "smartfarm/#";
+    protected String[] getSubscriptionTopics() {
+        return new String[]{
+                "smartfarm/#"  // Wildcard: sensor, jadwal, status, kontrol
+        };
+    }
+
+    @Override
+    protected String getBrokerUrl() {
+        return "tcp://broker.emqx.io:1883";
+    }
+
+    @Override
+    protected String getMqttUsername() {
+        return "ardana_garden";
+    }
+
+    @Override
+    protected String getMqttPassword() {
+        return "rahasia1234";
     }
 
     @Override

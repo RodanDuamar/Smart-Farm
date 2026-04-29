@@ -31,25 +31,17 @@
             android:name=".mediatanah.MediaTanahActivity"
             android:exported="false" />
 
-        <activity
-            android:name=".base.BaseSmartFarmActivity"
-            android:exported="false" />
-
         <!--
-            ScheduleAlarmReceiver dan BootReceiver sudah tidak digunakan.
+            ScheduleAlarmReceiver dan BootReceiver dipertahankan sebagai no-op.
             Logika penjadwalan sekarang dijalankan oleh mikrokontroler (MCU).
-            Receiver di bawah ini dipertahankan sebagai no-op agar tidak crash
-            jika masih ada alarm lama yang tertrigger. Bisa dihapus sepenuhnya.
         -->
         <receiver
             android:name=".mediatanah.ScheduleAlarmReceiver"
-            android:exported="false"
-            android:enabled="false" />
+            android:exported="false" />
 
         <receiver
             android:name=".mediatanah.BootReceiver"
-            android:exported="false"
-            android:enabled="false" />
+            android:exported="false" />
 
     </application>
 

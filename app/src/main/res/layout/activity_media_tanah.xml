@@ -23,19 +23,6 @@
             android:paddingTop="48dp"
             android:paddingBottom="32dp">
 
-            <!-- App Logo Icon -->
-            <FrameLayout
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:background="@drawable/bg_icon_circle_green">
-
-                <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_app_logo"
-                    android:contentDescription="App Logo" />
-            </FrameLayout>
 
             <!-- Title -->
             <TextView

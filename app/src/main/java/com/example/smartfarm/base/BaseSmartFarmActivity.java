@@ -14,29 +14,61 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
+/**
+ * Base Activity untuk semua Activity yang membutuhkan koneksi MQTT.
+ *
+ * Mendukung konfigurasi broker, credential, dan subscription per Activity:
+ * - getBrokerUrl()          → URL broker MQTT (wajib override)
+ * - getMqttUsername()       → username (opsional, default null = tanpa auth)
+ * - getMqttPassword()       → password (opsional, default null = tanpa auth)
+ * - getSubscriptionTopics() → topik MQTT yang di-subscribe (wajib override)
+ *
+ * Ini memungkinkan Hidroponik dan Media Tanah menggunakan broker/credential berbeda.
+ */
 public abstract class BaseSmartFarmActivity extends AppCompatActivity {
 
-    private static final String TAG        = "BaseSmartFarm";
-    private static final String BROKER_URL = "tcp://broker.hivemq.com:1883";
+    private static final String TAG = "BaseSmartFarm";
 
     // Ganti MqttClient -> MqttAsyncClient agar tidak blokir UI thread
     protected MqttAsyncClient mqttClient;
 
     protected abstract String   getClientId();
     protected abstract String[] getSubscriptionTopics();
+    protected abstract String   getBrokerUrl();
     protected abstract void     onMqttMessageReceived(String topic, String payload);
+
+    /**
+     * Override untuk menambahkan username MQTT. Default: null (tanpa auth).
+     */
+    protected String getMqttUsername() { return null; }
+
+    /**
+     * Override untuk menambahkan password MQTT. Default: null (tanpa auth).
+     */
+    protected String getMqttPassword() { return null; }
+
     protected void onMqttConnected() {}
 
     protected void setupMQTT() {
         try {
             // MemoryPersistence agar tidak perlu storage permission
-            mqttClient = new MqttAsyncClient(BROKER_URL, getClientId(), new MemoryPersistence());
+            mqttClient = new MqttAsyncClient(getBrokerUrl(), getClientId(), new MemoryPersistence());
 
             MqttConnectOptions options = new MqttConnectOptions();
             options.setCleanSession(true);
             options.setAutomaticReconnect(true);
             options.setConnectionTimeout(10);
             options.setKeepAliveInterval(60);
+
+            // Set credential jika tersedia
+            String username = getMqttUsername();
+            String password = getMqttPassword();
+            if (username != null && !username.isEmpty()) {
+                options.setUserName(username);
+                if (password != null) {
+                    options.setPassword(password.toCharArray());
+                }
+            }
 
             // Set callback SEBELUM connect
             mqttClient.setCallback(new MqttCallback() {
@@ -61,7 +93,7 @@ public abstract class BaseSmartFarmActivity extends AppCompatActivity {
             mqttClient.connect(options, null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
-                    Log.d(TAG, "MQTT Connected!");
+                    Log.d(TAG, "MQTT Connected to " + getBrokerUrl());
                     // Subscribe setelah connect berhasil
                     subscribeToTopics();
                     runOnUiThread(() -> onMqttConnected());

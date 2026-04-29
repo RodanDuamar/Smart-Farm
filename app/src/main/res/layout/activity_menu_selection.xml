@@ -40,7 +40,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Smart Farm"
+                android:text="Petani Millenial Sleman"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:textColor="#1B5E20"
@@ -50,9 +50,10 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Petani Millenial Sleman"
+                android:text="Smart Farm"
+                android:textStyle="bold"
                 android:textSize="14sp"
-                android:textColor="#757575"
+                android:textColor="#1B5E20"
                 android:layout_marginTop="4dp" />
 
             <!-- Description -->

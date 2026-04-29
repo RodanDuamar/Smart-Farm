@@ -227,6 +227,11 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
     }
 
     @Override
+    protected String getBrokerUrl() {
+        return "tcp://broker.hivemq.com:1883";
+    }
+
+    @Override
     protected String getClientId() {
         return "Android_Hidroponik_" + System.currentTimeMillis();
     }
