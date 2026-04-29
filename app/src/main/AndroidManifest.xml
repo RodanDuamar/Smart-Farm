@@ -4,10 +4,6 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:allowBackup="true"
@@ -39,28 +35,21 @@
             android:name=".hidroponik.HidroponikActivity"
             android:exported="false" />
 
-        <!-- Schedule Alarm Receiver: menerima alarm untuk valve ON/OFF -->
+        <!--
+            ScheduleAlarmReceiver dan BootReceiver sudah tidak digunakan.
+            Logika penjadwalan sekarang dijalankan oleh mikrokontroler (MCU).
+            Receiver di bawah ini dipertahankan sebagai no-op agar tidak crash
+            jika masih ada alarm lama yang tertrigger. Bisa dihapus sepenuhnya.
+        -->
         <receiver
             android:name=".mediatanah.ScheduleAlarmReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.example.smartfarm.VALVE_START" />
-                <action android:name="com.example.smartfarm.VALVE_STOP" />
-            </intent-filter>
-        </receiver>
+            android:exported="false"
+            android:enabled="false" />
 
-        <!-- Boot Receiver: re-register alarm setelah reboot -->
         <receiver
             android:name=".mediatanah.BootReceiver"
-            android:exported="true"
-            android:directBootAware="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-                <action android:name="android.intent.action.TIME_SET" />
-                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
-            </intent-filter>
-        </receiver>
+            android:exported="false"
+            android:enabled="false" />
 
     </application>
 

@@ -2,8 +2,11 @@ package com.example.smartfarm.mediatanah;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.CountDownTimer;
 import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,107 +15,109 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Manager class yang mengelola semua jadwal dan timer valve.
+ * Manager class yang mengelola jadwal valve.
  *
- * Tanggung jawab:
- * - CRUD jadwal per valve (4 valve, MULTIPLE jadwal per valve)
- * - Menyimpan/memuat jadwal ke/dari SharedPreferences
- * - Mengelola CountDownTimer per valve
- * - Mengatur logika pompa otomatis (ON saat valve aktif, OFF saat semua selesai)
- * - Communicating state changes ke Activity via ScheduleCallback
+ * ARSITEKTUR:
+ * - Logika penjadwalan (timer, pengecekan waktu, eksekusi ON/OFF)
+ *   sepenuhnya dijalankan oleh MIKROKONTROLER.
+ * - Android app hanya bertugas:
+ *   1. Mengirim perintah jadwal (add/update/delete) ke MCU via MQTT
+ *   2. Menyimpan salinan jadwal secara lokal (cache untuk tampilan UI)
+ *   3. Menerima state update dari MCU (valve ON/OFF, pompa ON/OFF)
+ *   4. Menampilkan status terkini ke pengguna
  *
- * Prinsip OOP:
- * - Single Responsibility: hanya mengelola scheduling logic
- * - Dependency Inversion: berkomunikasi via interface (ScheduleCallback)
- * - Encapsulation: internal timer state disembunyikan
+ * MQTT TOPICS:
+ * App → MCU (publish):
+ *   smartfarm/jadwal/set    → JSON jadwal untuk disimpan di MCU
+ *   smartfarm/jadwal/delete → JSON {valve, id} untuk dihapus dari MCU
+ *   smartfarm/jadwal/sync   → Request MCU kirim semua jadwal terkini
+ *
+ * MCU → App (subscribe):
+ *   smartfarm/jadwal/state  → JSON semua jadwal yang tersimpan di MCU
+ *   smartfarm/status/valves → JSON status ON/OFF semua valve & pompa
  */
 public class ValveScheduleManager {
 
     private static final String TAG = "ValveScheduleManager";
     private static final String PREFS_NAME = "valve_schedules";
     private static final String KEY_SCHEDULE_PREFIX = "schedule_valve_";
+    private static final String KEY_VALVE_STATES = "valve_states";
     public static final int VALVE_COUNT = 4;
     /** Maximum jadwal per valve */
     public static final int MAX_SCHEDULES_PER_VALVE = 10;
 
-    /** Jadwal konfigurasi per valve (index 1-4), setiap valve bisa punya beberapa jadwal */
+    // ==================== MQTT TOPICS ====================
+
+    /** App → MCU: kirim jadwal untuk disimpan di MCU */
+    public static final String TOPIC_SCHEDULE_SET = "smartfarm/jadwal/set";
+    /** App → MCU: hapus jadwal dari MCU */
+    public static final String TOPIC_SCHEDULE_DELETE = "smartfarm/jadwal/delete";
+    /** App → MCU: request sinkronisasi semua jadwal */
+    public static final String TOPIC_SCHEDULE_SYNC = "smartfarm/jadwal/sync";
+    /** MCU → App: semua jadwal yang tersimpan di MCU */
+    public static final String TOPIC_SCHEDULE_STATE = "smartfarm/jadwal/state";
+    /** MCU → App: status ON/OFF semua valve dan pompa */
+    public static final String TOPIC_STATUS_VALVES = "smartfarm/status/valves";
+
+    // ==================== STATE ====================
+
+    /** Jadwal per valve (cache lokal, sumber kebenaran ada di MCU) */
     private final Map<Integer, List<ScheduleConfig>> schedules;
 
-    /** CountDownTimer per valve yang sedang berjalan */
-    private final Map<Integer, CountDownTimer> activeTimers;
+    /** Status valve terkini dari MCU (true = ON, false = OFF) */
+    private final Map<Integer, Boolean> valveStates;
 
-    /** Track valve mana yang timer-nya aktif */
-    private final Map<Integer, Boolean> timerActiveFlags;
+    /** Status pompa terkini dari MCU */
+    private boolean pumpState = false;
 
-    /** Apakah pompa dinyalakan otomatis oleh valve timer */
-    private boolean pumpAutoEnabled = false;
-
-    /** SharedPreferences untuk persistence */
+    /** SharedPreferences untuk cache lokal */
     private final SharedPreferences prefs;
 
     /** Callback untuk komunikasi ke Activity */
     private final ScheduleCallback callback;
 
-    /** AlarmManager helper untuk scheduling background */
-    private final ScheduleAlarmHelper alarmHelper;
-
     // ==================== CALLBACK INTERFACE ====================
 
     /**
      * Interface untuk komunikasi dari manager ke Activity/UI layer.
-     * Activity harus implement interface ini untuk menerima event dari manager.
      */
     public interface ScheduleCallback {
-        /** Dipanggil saat valve harus dinyalakan/dimatikan */
-        void onValveSwitched(int valveIndex, boolean turnOn);
+        /** Dipanggil saat perlu mengirim pesan MQTT */
+        void onMqttPublishRequested(String topic, String payload);
 
-        /** Dipanggil setiap detik saat timer berjalan */
-        void onCountdownTick(int valveIndex, long millisRemaining, String formattedTime);
+        /** Dipanggil saat status valve berubah (dari MCU) */
+        void onValveStateChanged(int valveIndex, boolean isOn);
 
-        /** Dipanggil saat timer valve selesai */
-        void onTimerFinished(int valveIndex);
+        /** Dipanggil saat status pompa berubah (dari MCU) */
+        void onPumpStateChanged(boolean isOn, String statusText);
 
-        /** Dipanggil saat pompa perlu dinyalakan/dimatikan otomatis */
-        void onPumpAutoControl(boolean turnOn, String statusText);
-
-        /** Dipanggil saat jadwal berubah (disimpan/dihapus) */
-        void onScheduleUpdated(int valveIndex, ScheduleConfig config);
-
-        /** Dipanggil saat semua timer selesai */
-        void onAllTimersFinished();
+        /** Dipanggil saat daftar jadwal berubah (dari MCU atau lokal) */
+        void onScheduleListChanged(int valveIndex);
     }
 
     // ==================== CONSTRUCTOR ====================
 
-    /**
-     * Buat manager baru.
-     *
-     * @param context  Context untuk SharedPreferences
-     * @param callback Callback untuk komunikasi ke Activity
-     */
     public ValveScheduleManager(Context context, ScheduleCallback callback) {
         this.prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         this.callback = callback;
         this.schedules = new HashMap<>();
-        this.activeTimers = new HashMap<>();
-        this.timerActiveFlags = new HashMap<>();
-        this.alarmHelper = new ScheduleAlarmHelper(context);
+        this.valveStates = new HashMap<>();
 
-        // Inisialisasi flags dan empty lists
+        // Inisialisasi
         for (int i = 1; i <= VALVE_COUNT; i++) {
-            timerActiveFlags.put(i, false);
             schedules.put(i, new ArrayList<>());
+            valveStates.put(i, false);
         }
 
-        // Load jadwal tersimpan
-        loadSchedules();
+        // Load cache lokal
+        loadLocalCache();
     }
 
-    // ==================== SCHEDULE CRUD (MULTI-SCHEDULE) ====================
+    // ==================== MQTT COMMAND: App → MCU ====================
 
     /**
-     * Tambah jadwal baru untuk valve tertentu.
-     * ID akan di-assign secara otomatis.
+     * Kirim jadwal baru ke MCU via MQTT dan simpan di cache lokal.
+     * MCU akan menyimpan jadwal dan menjalankannya secara mandiri.
      *
      * @param valveIndex Index valve (1-4)
      * @param config     Konfigurasi jadwal baru
@@ -134,22 +139,21 @@ public class ValveScheduleManager {
             }
         }
         config.setId(nextId);
+
+        // Simpan ke cache lokal
         list.add(config);
+        saveLocalCache(valveIndex);
 
-        saveSchedules(valveIndex);
+        // Kirim ke MCU via MQTT
+        publishScheduleToMcu(valveIndex, config);
 
-        // Daftarkan alarm di AlarmManager untuk jadwal baru ini
-        alarmHelper.registerAlarmsForSchedule(valveIndex, config);
-
-        callback.onScheduleUpdated(valveIndex, config);
-        Log.d(TAG, "Schedule added for valve " + valveIndex + " [id=" + nextId + "]: " + config);
+        callback.onScheduleListChanged(valveIndex);
+        Log.d(TAG, "Schedule added & sent to MCU: valve " + valveIndex
+                + " [id=" + nextId + "]");
     }
 
     /**
-     * Update jadwal yang sudah ada berdasarkan scheduleId.
-     *
-     * @param valveIndex Index valve (1-4)
-     * @param config     Konfigurasi jadwal yang diupdate (harus punya id yang sama)
+     * Update jadwal di MCU via MQTT.
      */
     public void updateSchedule(int valveIndex, ScheduleConfig config) {
         validateIndex(valveIndex);
@@ -157,27 +161,24 @@ public class ValveScheduleManager {
 
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i).getId() == config.getId()) {
-                // Cancel alarm lama
-                alarmHelper.cancelAlarmsForSchedule(valveIndex, list.get(i));
-                // Replace
                 list.set(i, config);
-                saveSchedules(valveIndex);
-                // Daftarkan alarm baru
-                alarmHelper.registerAlarmsForSchedule(valveIndex, config);
-                callback.onScheduleUpdated(valveIndex, config);
-                Log.d(TAG, "Schedule updated for valve " + valveIndex
-                        + " [id=" + config.getId() + "]: " + config);
+                saveLocalCache(valveIndex);
+
+                // Kirim update ke MCU
+                publishScheduleToMcu(valveIndex, config);
+
+                callback.onScheduleListChanged(valveIndex);
+                Log.d(TAG, "Schedule updated & sent to MCU: valve " + valveIndex
+                        + " [id=" + config.getId() + "]");
                 return;
             }
         }
-        Log.w(TAG, "Schedule id " + config.getId() + " not found for valve " + valveIndex);
+        Log.w(TAG, "Schedule id " + config.getId()
+                + " not found for valve " + valveIndex);
     }
 
     /**
-     * Hapus jadwal berdasarkan scheduleId.
-     *
-     * @param valveIndex Index valve (1-4)
-     * @param scheduleId ID jadwal yang akan dihapus
+     * Hapus jadwal dari MCU via MQTT.
      */
     public void removeSchedule(int valveIndex, int scheduleId) {
         validateIndex(valveIndex);
@@ -185,12 +186,14 @@ public class ValveScheduleManager {
 
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i).getId() == scheduleId) {
-                ScheduleConfig removed = list.remove(i);
-                // Cancel alarm di AlarmManager
-                alarmHelper.cancelAlarmsForSchedule(valveIndex, removed);
-                saveSchedules(valveIndex);
-                callback.onScheduleUpdated(valveIndex, null);
-                Log.d(TAG, "Schedule removed for valve " + valveIndex
+                list.remove(i);
+                saveLocalCache(valveIndex);
+
+                // Kirim perintah hapus ke MCU
+                publishDeleteToMcu(valveIndex, scheduleId);
+
+                callback.onScheduleListChanged(valveIndex);
+                Log.d(TAG, "Schedule deleted & sent to MCU: valve " + valveIndex
                         + " [id=" + scheduleId + "]");
                 return;
             }
@@ -198,30 +201,167 @@ public class ValveScheduleManager {
     }
 
     /**
-     * Hapus semua jadwal valve tertentu.
-     *
-     * @param valveIndex Index valve (1-4)
+     * Hapus semua jadwal valve dari MCU.
      */
     public void removeAllSchedules(int valveIndex) {
         validateIndex(valveIndex);
         List<ScheduleConfig> list = getScheduleList(valveIndex);
 
-        // Cancel semua alarm
+        // Kirim perintah hapus semua ke MCU
         for (ScheduleConfig config : list) {
-            alarmHelper.cancelAlarmsForSchedule(valveIndex, config);
+            publishDeleteToMcu(valveIndex, config.getId());
         }
         list.clear();
-        prefs.edit().remove(KEY_SCHEDULE_PREFIX + valveIndex).apply();
+        saveLocalCache(valveIndex);
 
-        callback.onScheduleUpdated(valveIndex, null);
+        callback.onScheduleListChanged(valveIndex);
         Log.d(TAG, "All schedules removed for valve " + valveIndex);
     }
 
     /**
-     * Dapatkan list semua jadwal untuk valve tertentu.
+     * Request sinkronisasi jadwal dari MCU.
+     * MCU akan membalas dengan publish ke TOPIC_SCHEDULE_STATE.
+     */
+    public void requestSyncFromMcu() {
+        callback.onMqttPublishRequested(TOPIC_SCHEDULE_SYNC, "ALL");
+        Log.d(TAG, "Sync request sent to MCU");
+    }
+
+    // ==================== MQTT RECEIVE: MCU → App ====================
+
+    /**
+     * Handle pesan MQTT dari MCU. Dipanggil oleh Activity saat pesan masuk.
      *
-     * @param valveIndex Index valve (1-4)
-     * @return List of ScheduleConfig (tidak pernah null)
+     * @param topic   MQTT topic
+     * @param payload Pesan payload
+     */
+    public void handleMqttMessage(String topic, String payload) {
+        switch (topic) {
+            case TOPIC_SCHEDULE_STATE:
+                handleScheduleState(payload);
+                break;
+            case TOPIC_STATUS_VALVES:
+                handleValveStatus(payload);
+                break;
+        }
+    }
+
+    /**
+     * Handle state jadwal dari MCU.
+     * Format payload:
+     * {
+     *   "1": [{"id":0,"days":[2,4],"start_hour":8,...}, ...],
+     *   "2": [...],
+     *   "3": [...],
+     *   "4": [...]
+     * }
+     */
+    private void handleScheduleState(String payload) {
+        try {
+            JSONObject json = new JSONObject(payload);
+            for (int i = 1; i <= VALVE_COUNT; i++) {
+                JSONArray arr = json.optJSONArray(String.valueOf(i));
+                List<ScheduleConfig> list = new ArrayList<>();
+                if (arr != null) {
+                    for (int j = 0; j < arr.length(); j++) {
+                        ScheduleConfig config = ScheduleConfig.fromJsonObject(
+                                arr.getJSONObject(j));
+                        if (config != null) {
+                            list.add(config);
+                        }
+                    }
+                }
+                schedules.put(i, list);
+                saveLocalCache(i);
+                callback.onScheduleListChanged(i);
+            }
+            Log.d(TAG, "Schedule state synced from MCU");
+        } catch (JSONException e) {
+            Log.e(TAG, "Error parsing schedule state from MCU: " + payload, e);
+        }
+    }
+
+    /**
+     * Handle status valve/pompa dari MCU.
+     * Format payload:
+     * {
+     *   "pompa": "ON",
+     *   "valve_1": "ON",
+     *   "valve_2": "OFF",
+     *   "valve_3": "OFF",
+     *   "valve_4": "OFF"
+     * }
+     */
+    private void handleValveStatus(String payload) {
+        try {
+            JSONObject json = new JSONObject(payload);
+
+            // Update pompa
+            boolean newPumpState = "ON".equalsIgnoreCase(
+                    json.optString("pompa", "OFF"));
+            if (newPumpState != pumpState) {
+                pumpState = newPumpState;
+                String statusText = pumpState ? "Otomatis (MCU)" : "Manual";
+                callback.onPumpStateChanged(pumpState, statusText);
+            }
+
+            // Update valves
+            for (int i = 1; i <= VALVE_COUNT; i++) {
+                boolean newState = "ON".equalsIgnoreCase(
+                        json.optString("valve_" + i, "OFF"));
+                Boolean oldState = valveStates.get(i);
+                if (oldState == null || newState != oldState) {
+                    valveStates.put(i, newState);
+                    callback.onValveStateChanged(i, newState);
+                }
+            }
+
+            Log.d(TAG, "Valve status updated from MCU: " + payload);
+        } catch (JSONException e) {
+            Log.e(TAG, "Error parsing valve status from MCU: " + payload, e);
+        }
+    }
+
+    // ==================== MQTT PUBLISH HELPERS ====================
+
+    /**
+     * Publish jadwal ke MCU.
+     * Format:
+     * {
+     *   "valve": 1,
+     *   "schedule": {id, days, start_hour, start_minute, end_hour, end_minute, enabled}
+     * }
+     */
+    private void publishScheduleToMcu(int valveIndex, ScheduleConfig config) {
+        try {
+            JSONObject payload = new JSONObject();
+            payload.put("valve", valveIndex);
+            payload.put("schedule", config.toJson());
+            callback.onMqttPublishRequested(TOPIC_SCHEDULE_SET, payload.toString());
+        } catch (JSONException e) {
+            Log.e(TAG, "Error creating schedule JSON", e);
+        }
+    }
+
+    /**
+     * Publish perintah hapus jadwal ke MCU.
+     * Format: {"valve": 1, "id": 0}
+     */
+    private void publishDeleteToMcu(int valveIndex, int scheduleId) {
+        try {
+            JSONObject payload = new JSONObject();
+            payload.put("valve", valveIndex);
+            payload.put("id", scheduleId);
+            callback.onMqttPublishRequested(TOPIC_SCHEDULE_DELETE, payload.toString());
+        } catch (JSONException e) {
+            Log.e(TAG, "Error creating delete JSON", e);
+        }
+    }
+
+    // ==================== SCHEDULE QUERY ====================
+
+    /**
+     * Dapatkan list semua jadwal untuk valve tertentu (dari cache lokal).
      */
     public List<ScheduleConfig> getScheduleList(int valveIndex) {
         validateIndex(valveIndex);
@@ -234,22 +374,7 @@ public class ValveScheduleManager {
     }
 
     /**
-     * Dapatkan jadwal pertama valve (backward compatibility).
-     *
-     * @param valveIndex Index valve (1-4)
-     * @return ScheduleConfig pertama atau null jika belum ada jadwal
-     */
-    public ScheduleConfig getSchedule(int valveIndex) {
-        List<ScheduleConfig> list = getScheduleList(valveIndex);
-        return list.isEmpty() ? null : list.get(0);
-    }
-
-    /**
      * Dapatkan jadwal berdasarkan ID.
-     *
-     * @param valveIndex Index valve (1-4)
-     * @param scheduleId ID jadwal
-     * @return ScheduleConfig atau null jika tidak ditemukan
      */
     public ScheduleConfig getScheduleById(int valveIndex, int scheduleId) {
         List<ScheduleConfig> list = getScheduleList(valveIndex);
@@ -289,293 +414,60 @@ public class ValveScheduleManager {
     }
 
     /**
-     * Simpan/update jadwal untuk valve tertentu (backward compat - single schedule).
-     * Jika sudah ada jadwal, update yang pertama. Jika belum ada, tambahkan baru.
-     *
-     * @param valveIndex Index valve (1-4)
-     * @param config     Konfigurasi jadwal baru
+     * Cek apakah valve sedang ON (berdasarkan status dari MCU).
      */
-    public void setSchedule(int valveIndex, ScheduleConfig config) {
-        validateIndex(valveIndex);
-        List<ScheduleConfig> list = getScheduleList(valveIndex);
-        if (list.isEmpty()) {
-            addSchedule(valveIndex, config);
-        } else {
-            config.setId(list.get(0).getId());
-            updateSchedule(valveIndex, config);
-        }
+    public boolean isValveOn(int valveIndex) {
+        Boolean state = valveStates.get(valveIndex);
+        return state != null && state;
     }
 
     /**
-     * Hapus semua jadwal valve tertentu (backward compat).
-     *
-     * @param valveIndex Index valve (1-4)
+     * Cek apakah ada valve yang sedang ON.
      */
-    public void removeSchedule(int valveIndex) {
-        removeAllSchedules(valveIndex);
-    }
-
-    // ==================== TIMER CONTROL ====================
-
-    /**
-     * Jalankan valve sekarang berdasarkan sisa waktu jadwal yang sedang aktif.
-     * Akan memilih jadwal yang saat ini berada dalam rentang waktu.
-     *
-     * @param valveIndex Index valve (1-4)
-     */
-    public void startValveNow(int valveIndex) {
-        List<ScheduleConfig> list = getScheduleList(valveIndex);
-        for (ScheduleConfig config : list) {
-            if (config.isEnabled() && config.hasValidDuration()
-                    && config.isTodayScheduled() && config.isWithinTimeRange()) {
-                long remainingMs = config.getRemainingDurationMs();
-                if (remainingMs > 0) {
-                    startValveTimer(valveIndex, remainingMs);
-                    return;
-                }
-            }
-        }
-        Log.w(TAG, "Cannot start valve " + valveIndex + ": no active schedule in range");
-    }
-
-    /**
-     * Jalankan valve dengan durasi tertentu (untuk quick-start tanpa jadwal).
-     *
-     * @param valveIndex Index valve (1-4)
-     * @param durationMs Durasi dalam milidetik
-     */
-    public void startValveWithDuration(int valveIndex, long durationMs) {
-        if (durationMs <= 0) {
-            Log.w(TAG, "Duration must be > 0");
-            return;
-        }
-        startValveTimer(valveIndex, durationMs);
-    }
-
-    /**
-     * Cek apakah hari ini ada jadwal yang harus jalan, dan jalankan jika ada.
-     * Hanya jalankan jika waktu sekarang berada dalam rentang jadwal.
-     * Dipanggil saat app dibuka atau secara periodik.
-     */
-    public void checkAndRunTodaySchedules() {
+    public boolean hasActiveValves() {
         for (int i = 1; i <= VALVE_COUNT; i++) {
-            if (isTimerActive(i)) continue; // Sudah ada timer aktif
-
-            List<ScheduleConfig> list = getScheduleList(i);
-            for (ScheduleConfig config : list) {
-                if (config.isEnabled() && config.isTodayScheduled()
-                        && config.isWithinTimeRange()) {
-                    long remainingMs = config.getRemainingDurationMs();
-                    if (remainingMs > 0) {
-                        Log.d(TAG, "Today's schedule active for valve " + i
-                                + " [id=" + config.getId() + "], remaining: "
-                                + formatTime(remainingMs));
-                        startValveTimer(i, remainingMs);
-                        break; // Satu valve hanya satu timer pada satu waktu
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Internal: mulai countdown timer untuk valve.
-     */
-    private void startValveTimer(int valveIndex, long durationMs) {
-        // Jika sudah ada timer aktif untuk valve ini, cancel dulu
-        stopValve(valveIndex);
-
-        // 1. Nyalakan pompa otomatis
-        ensurePumpOn();
-
-        // 2. Nyalakan valve
-        callback.onValveSwitched(valveIndex, true);
-
-        // 3. Mulai countdown
-        CountDownTimer timer = new CountDownTimer(durationMs, 1000) {
-            @Override
-            public void onTick(long millisUntilFinished) {
-                String timeStr = formatTime(millisUntilFinished);
-                callback.onCountdownTick(valveIndex, millisUntilFinished, timeStr);
-            }
-
-            @Override
-            public void onFinish() {
-                // Matikan valve
-                callback.onValveSwitched(valveIndex, false);
-                timerActiveFlags.put(valveIndex, false);
-                activeTimers.remove(valveIndex);
-
-                // Notify UI
-                callback.onTimerFinished(valveIndex);
-
-                // Cek apakah masih ada valve timer lain yang aktif
-                if (!hasActiveTimers()) {
-                    turnOffPumpAuto();
-                    callback.onAllTimersFinished();
-                }
-            }
-        };
-
-        activeTimers.put(valveIndex, timer);
-        timerActiveFlags.put(valveIndex, true);
-        timer.start();
-
-        Log.d(TAG, "Timer started for valve " + valveIndex + ": " + formatTime(durationMs));
-    }
-
-    /**
-     * Hentikan timer untuk valve tertentu.
-     *
-     * @param valveIndex Index valve (1-4)
-     */
-    public void stopValve(int valveIndex) {
-        CountDownTimer timer = activeTimers.get(valveIndex);
-        if (timer != null) {
-            timer.cancel();
-            activeTimers.remove(valveIndex);
-        }
-        timerActiveFlags.put(valveIndex, false);
-        callback.onValveSwitched(valveIndex, false);
-
-        // Cek apakah masih ada valve timer lain yang aktif
-        if (!hasActiveTimers()) {
-            turnOffPumpAuto();
-            callback.onAllTimersFinished();
-        }
-    }
-
-    /**
-     * Hentikan semua timer aktif.
-     */
-    public void stopAllValves() {
-        for (int i = 1; i <= VALVE_COUNT; i++) {
-            CountDownTimer timer = activeTimers.get(i);
-            if (timer != null) {
-                timer.cancel();
-            }
-            timerActiveFlags.put(i, false);
-            callback.onValveSwitched(i, false);
-        }
-        activeTimers.clear();
-        turnOffPumpAuto();
-        callback.onAllTimersFinished();
-    }
-
-    /**
-     * Cek apakah valve tertentu sedang punya timer aktif.
-     */
-    public boolean isTimerActive(int valveIndex) {
-        Boolean flag = timerActiveFlags.get(valveIndex);
-        return flag != null && flag;
-    }
-
-    /**
-     * Cek apakah ada valve timer yang masih aktif.
-     */
-    public boolean hasActiveTimers() {
-        for (int i = 1; i <= VALVE_COUNT; i++) {
-            if (isTimerActive(i)) return true;
+            if (isValveOn(i)) return true;
         }
         return false;
     }
 
-    // ==================== PUMP AUTO CONTROL ====================
-
     /**
-     * Pastikan pompa ON. Jika belum, nyalakan otomatis.
+     * Cek apakah pompa sedang ON.
      */
-    private void ensurePumpOn() {
-        if (!pumpAutoEnabled) {
-            pumpAutoEnabled = true;
-            callback.onPumpAutoControl(true, "Otomatis (valve aktif)");
-        }
+    public boolean isPumpOn() {
+        return pumpState;
     }
 
-    /**
-     * Matikan pompa otomatis saat semua valve selesai.
-     */
-    private void turnOffPumpAuto() {
-        if (pumpAutoEnabled) {
-            pumpAutoEnabled = false;
-            callback.onPumpAutoControl(false, "Manual");
-        }
-    }
+    // ==================== LOCAL CACHE ====================
 
     /**
-     * Cek apakah pompa diaktifkan otomatis.
+     * Simpan cache lokal satu valve.
+     * Cache ini hanya untuk tampilan UI saat app dibuka.
+     * Sumber kebenaran tetap ada di MCU.
      */
-    public boolean isPumpAutoEnabled() {
-        return pumpAutoEnabled;
-    }
-
-    /**
-     * Set flag pompa auto (dipanggil jika pompa sudah ON manual).
-     */
-    public void setPumpAutoEnabled(boolean auto) {
-        this.pumpAutoEnabled = auto;
-    }
-
-    // ==================== PERSISTENCE ====================
-
-    /**
-     * Simpan semua jadwal satu valve ke SharedPreferences.
-     */
-    private void saveSchedules(int valveIndex) {
+    private void saveLocalCache(int valveIndex) {
         List<ScheduleConfig> list = getScheduleList(valveIndex);
         String json = ScheduleConfig.listToJson(list);
         prefs.edit().putString(KEY_SCHEDULE_PREFIX + valveIndex, json).apply();
-        Log.d(TAG, "Saved " + list.size() + " schedules for valve " + valveIndex);
     }
 
     /**
-     * Simpan semua jadwal ke SharedPreferences.
+     * Muat cache lokal. Dipanggil saat startup untuk menampilkan
+     * jadwal terakhir yang diketahui sambil menunggu sync dari MCU.
      */
-    public void saveAllSchedules() {
-        SharedPreferences.Editor editor = prefs.edit();
-        for (int i = 1; i <= VALVE_COUNT; i++) {
-            List<ScheduleConfig> list = getScheduleList(i);
-            if (!list.isEmpty()) {
-                editor.putString(KEY_SCHEDULE_PREFIX + i, ScheduleConfig.listToJson(list));
-            } else {
-                editor.remove(KEY_SCHEDULE_PREFIX + i);
-            }
-        }
-        editor.apply();
-        Log.d(TAG, "All schedules saved");
-    }
-
-    /**
-     * Muat semua jadwal dari SharedPreferences.
-     * Backward compatible: mendukung format lama (single JSON object) dan
-     * format baru (JSON array).
-     */
-    private void loadSchedules() {
+    private void loadLocalCache() {
         for (int i = 1; i <= VALVE_COUNT; i++) {
             String json = prefs.getString(KEY_SCHEDULE_PREFIX + i, null);
             List<ScheduleConfig> list = ScheduleConfig.listFromJson(json);
             if (!list.isEmpty()) {
                 schedules.put(i, list);
-                Log.d(TAG, "Loaded " + list.size() + " schedules for valve " + i);
+                Log.d(TAG, "Loaded " + list.size()
+                        + " cached schedules for valve " + i);
             }
         }
     }
 
     // ==================== UTILITY ====================
-
-    /**
-     * Format milidetik ke "HH:mm:ss" atau "mm:ss".
-     */
-    public static String formatTime(long millis) {
-        long totalSeconds = millis / 1000;
-        long hours = totalSeconds / 3600;
-        long minutes = (totalSeconds % 3600) / 60;
-        long seconds = totalSeconds % 60;
-        if (hours > 0) {
-            return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds);
-        }
-        return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
-    }
 
     /**
      * Dapatkan nama valve berdasarkan index.
@@ -596,43 +488,13 @@ public class ValveScheduleManager {
     private void validateIndex(int valveIndex) {
         if (valveIndex < 1 || valveIndex > VALVE_COUNT) {
             throw new IllegalArgumentException(
-                    "Valve index must be between 1 and " + VALVE_COUNT + ", got: " + valveIndex);
+                    "Valve index must be between 1 and " + VALVE_COUNT
+                    + ", got: " + valveIndex);
         }
-    }
-
-    /**
-     * Cancel semua in-app timer. Dipanggil saat Activity onDestroy.
-     * CATATAN: Ini TIDAK membatalkan alarm AlarmManager.
-     * Jadwal tetap berjalan di background meskipun Activity dihancurkan.
-     */
-    public void cancelAllTimers() {
-        for (CountDownTimer timer : activeTimers.values()) {
-            if (timer != null) timer.cancel();
-        }
-        activeTimers.clear();
-        for (int i = 1; i <= VALVE_COUNT; i++) {
-            timerActiveFlags.put(i, false);
-        }
-    }
-
-    /**
-     * Pastikan semua alarm terdaftar di AlarmManager.
-     * Dipanggil saat app dibuka untuk memastikan alarm tidak hilang.
-     */
-    public void ensureAlarmsRegistered() {
-        alarmHelper.reRegisterAllAlarms();
-    }
-
-    /**
-     * Dapatkan AlarmHelper untuk akses langsung.
-     */
-    public ScheduleAlarmHelper getAlarmHelper() {
-        return alarmHelper;
     }
 
     /**
      * Mendapatkan teks ringkasan semua jadwal valve untuk ditampilkan di UI.
-     * Contoh: "2 jadwal aktif" atau "📅 Sen, Rab • 08:00-10:30"
      */
     public String getScheduleSummaryText(int valveIndex) {
         List<ScheduleConfig> list = getScheduleList(valveIndex);
@@ -646,11 +508,24 @@ public class ValveScheduleManager {
         }
 
         if (list.size() == 1) {
-            // Jika hanya 1 jadwal, tampilkan detail
             return list.get(0).getSummaryText();
         } else {
-            // Jika multiple, tampilkan jumlah
             return "📅 " + activeCount + " jadwal aktif";
         }
+    }
+
+    /**
+     * Format milidetik ke "HH:mm:ss" atau "mm:ss".
+     */
+    public static String formatTime(long millis) {
+        long totalSeconds = millis / 1000;
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
+        if (hours > 0) {
+            return String.format(Locale.getDefault(), "%02d:%02d:%02d",
+                    hours, minutes, seconds);
+        }
+        return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
     }
 }

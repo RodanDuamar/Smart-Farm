@@ -6,47 +6,24 @@ import android.content.Intent;
 import android.util.Log;
 
 /**
- * BroadcastReceiver yang dipanggil setelah device reboot.
+ * Class ini sudah tidak digunakan.
  *
- * AlarmManager alarms hilang saat device restart, jadi kita perlu
- * mendaftarkan ulang semua alarm dari jadwal yang tersimpan
- * di SharedPreferences.
+ * Logika penjadwalan sekarang dijalankan sepenuhnya oleh mikrokontroler (MCU).
+ * Tidak ada alarm Android yang perlu di-register ulang setelah boot.
  *
- * Juga menangani TIME_SET dan TIMEZONE_CHANGED agar alarm
- * tetap akurat jika pengguna mengubah waktu perangkat.
+ * Class ini dipertahankan agar AndroidManifest.xml tidak error.
+ * Anda bisa menghapus file ini beserta entry-nya di AndroidManifest.xml.
+ *
+ * @deprecated Scheduling sekarang di MCU, bukan di Android.
  */
+@Deprecated
 public class BootReceiver extends BroadcastReceiver {
 
     private static final String TAG = "BootReceiver";
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (intent == null || intent.getAction() == null) return;
-
-        String action = intent.getAction();
-        Log.d(TAG, "Received action: " + action);
-
-        switch (action) {
-            case Intent.ACTION_BOOT_COMPLETED:
-            case Intent.ACTION_MY_PACKAGE_REPLACED:
-            case "android.intent.action.TIME_SET":
-            case "android.intent.action.TIMEZONE_CHANGED":
-                // Re-register semua alarm dari jadwal tersimpan
-                reRegisterAlarms(context);
-                break;
-        }
-    }
-
-    /**
-     * Daftarkan ulang semua alarm dari SharedPreferences.
-     */
-    private void reRegisterAlarms(Context context) {
-        try {
-            ScheduleAlarmHelper helper = new ScheduleAlarmHelper(context);
-            helper.reRegisterAllAlarms();
-            Log.d(TAG, "Successfully re-registered all schedule alarms");
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to re-register alarms", e);
-        }
+        Log.d(TAG, "Boot received but ignored - scheduling now handled by MCU");
+        // No-op: semua logika penjadwalan dijalankan oleh mikrokontroler
     }
 }

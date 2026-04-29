@@ -9,7 +9,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.NumberPicker;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,19 +34,23 @@ import java.util.Set;
 
 /**
  * Activity untuk monitoring dan kontrol sistem irigasi Media Tanah.
- * Menampilkan sensor kelembapan, pH tanah, valve kontrol, dan penjadwalan.
- * Extends BaseSmartFarmActivity untuk reuse MQTT logic.
  *
- * Fitur:
- * - Monitoring sensor (kelembapan, pH)
- * - Notifikasi peringatan kondisi abnormal
- * - Penjadwalan valve per hari dengan durasi (+ pompa otomatis)
- * - MULTIPLE jadwal per valve (tambah, edit, hapus)
+ * ARSITEKTUR:
+ * - Logika penjadwalan dijalankan sepenuhnya oleh MIKROKONTROLER (MCU).
+ * - App hanya mengirim konfigurasi jadwal ke MCU via MQTT.
+ * - MCU menyimpan jadwal, mengeksekusi ON/OFF valve secara mandiri.
+ * - App menerima status terkini dari MCU untuk sinkronisasi tampilan.
  *
- * Desain OOP:
- * - Scheduling logic didelegasikan ke ValveScheduleManager
- * - Komunikasi via ScheduleCallback interface
- * - Model jadwal disimpan di ScheduleConfig
+ * MQTT Subscribe:
+ * - smartfarm/sensor/#          → data sensor (kelembapan, pH)
+ * - smartfarm/jadwal/state      → daftar jadwal dari MCU
+ * - smartfarm/status/valves     → status ON/OFF valve & pompa dari MCU
+ *
+ * MQTT Publish:
+ * - smartfarm/jadwal/set        → kirim jadwal ke MCU
+ * - smartfarm/jadwal/delete     → hapus jadwal dari MCU
+ * - smartfarm/jadwal/sync       → request sinkronisasi
+ * - smartfarm/kontrol/*         → kontrol manual valve/pompa
  */
 public class MediaTanahActivity extends BaseSmartFarmActivity
         implements ValveScheduleManager.ScheduleCallback {
@@ -64,14 +67,14 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     private MaterialSwitch switchPompa, switchKranAir, switchKranInsek, switchKranPupuk, switchKranBuang;
     private MaterialSwitch switchSumberDaya;
 
-    // Timer buttons
+    // Timer/schedule buttons
     private ImageView btnTimerKranAir, btnTimerKranInsek, btnTimerKranPupuk, btnTimerKranBuang;
 
-    // Countdown/schedule display per valve
+    // Schedule display per valve
     private TextView tvCountdownKranAir, tvCountdownKranInsek, tvCountdownKranPupuk, tvCountdownKranBuang;
     private TextView tvPompaStatus;
 
-    // Jadwal Status Card views
+    // Jadwal Status Card views (menampilkan valve yang sedang aktif dari MCU)
     private MaterialCardView cardJadwalStatus;
     private LinearLayout layoutPompaTimerStatus;
     private LinearLayout layoutKranAirTimerStatus, layoutKranInsekTimerStatus;
@@ -83,14 +86,14 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
 
     // ==================== MANAGER ====================
 
-    /** Manager yang mengelola semua scheduling & timer logic */
     private ValveScheduleManager scheduleManager;
 
-    // ==================== ACTIVE DIALOG REFERENCES ====================
+    // ==================== DIALOG STATE ====================
 
-    /** Reference ke dialog daftar jadwal yang sedang terbuka (untuk refresh) */
     private AlertDialog activeScheduleListDialog;
-    private int activeScheduleListValveIndex = -1;
+
+    // ==================== FLAG: suppress switch listener saat sync dari MCU ====================
+    private boolean suppressSwitchListener = false;
 
     // ==================== PERMISSION ====================
 
@@ -114,7 +117,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         NotificationHelper.createNotificationChannels(this);
         requestNotificationPermission();
 
-        // Inisialisasi manager (akan load jadwal dari SharedPreferences)
+        // Inisialisasi manager (load cache lokal)
         scheduleManager = new ValveScheduleManager(this, this);
 
         setupMQTT();
@@ -122,16 +125,11 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         setupSwitchListeners();
         setupTimerButtons();
 
-        // Tampilkan info jadwal yang tersimpan di UI
+        // Tampilkan jadwal dari cache lokal
         refreshAllScheduleDisplays();
 
-        // Pastikan semua alarm terdaftar di AlarmManager
-        // (penting jika alarm hilang karena force-stop atau update app)
-        scheduleManager.ensureAlarmsRegistered();
-
-        // Cek apakah ada jadwal yang seharusnya sedang berjalan sekarang
-        // (misal: app dibuka saat jadwal sedang aktif)
-        scheduleManager.checkAndRunTodaySchedules();
+        // Request sinkronisasi jadwal terkini dari MCU
+        scheduleManager.requestSyncFromMcu();
     }
 
     @Override
@@ -139,40 +137,45 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         return "AndroidSmartFarm_MediaTanah";
     }
 
+    /**
+     * Subscribe ke sensor data + jadwal state + valve status dari MCU.
+     */
     @Override
     protected String getSubscriptionTopic() {
-        return "smartfarm/sensor/#";
+        return "smartfarm/#";
     }
 
     @Override
     protected void onMqttMessageReceived(String topic, String payload) {
+        // Handle sensor data
         switch (topic) {
             case "smartfarm/sensor/kelembapan":
                 updateKelembapan(payload);
-                break;
+                return;
             case "smartfarm/sensor/ph":
                 updatePH(payload);
-                break;
+                return;
+        }
+
+        // Handle jadwal & status dari MCU via manager
+        if (topic.equals(ValveScheduleManager.TOPIC_SCHEDULE_STATE)
+                || topic.equals(ValveScheduleManager.TOPIC_STATUS_VALVES)) {
+            scheduleManager.handleMqttMessage(topic, payload);
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Refresh tampilan jadwal dan cek jadwal yang mungkin berjalan
         if (scheduleManager != null) {
             refreshAllScheduleDisplays();
-            scheduleManager.checkAndRunTodaySchedules();
+            // Request sinkronisasi saat app kembali ke foreground
+            scheduleManager.requestSyncFromMcu();
         }
     }
 
     @Override
     protected void onDestroy() {
-        // Cancel hanya in-app CountDownTimer, BUKAN alarm AlarmManager.
-        // Jadwal AlarmManager tetap berjalan di background.
-        if (scheduleManager != null) {
-            scheduleManager.cancelAllTimers();
-        }
         super.onDestroy();
     }
 
@@ -204,13 +207,13 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         switchKranBuang = findViewById(R.id.switchKranBuang);
         switchSumberDaya = findViewById(R.id.switchSumberDaya);
 
-        // Timer buttons
+        // Timer/schedule buttons
         btnTimerKranAir = findViewById(R.id.btnTimerValve1);
         btnTimerKranInsek = findViewById(R.id.btnTimerValve2);
         btnTimerKranPupuk = findViewById(R.id.btnTimerKranPupuk);
         btnTimerKranBuang = findViewById(R.id.btnTimerKranBuang);
 
-        // Countdown/schedule displays
+        // Schedule displays
         tvCountdownKranAir = findViewById(R.id.tvCountdownKranAir);
         tvCountdownKranInsek = findViewById(R.id.tvCountdownKranInsek);
         tvCountdownKranPupuk = findViewById(R.id.tvCountdownKranPupuk);
@@ -233,42 +236,45 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     }
 
     private void setupSwitchListeners() {
+        // Kontrol manual pompa
         switchPompa.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            // Jika pompa dimatikan manual tapi ada valve timer aktif, cegah
-            if (!isChecked && scheduleManager.hasActiveTimers()) {
-                switchPompa.setChecked(true);
-                Toast.makeText(this,
-                        "⚠ Pompa tidak bisa dimatikan saat valve dijadwalkan",
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
+            if (suppressSwitchListener) return;
             publishMQTT("smartfarm/kontrol/pompa", isChecked ? "ON" : "OFF");
-            if (!isChecked) {
-                scheduleManager.setPumpAutoEnabled(false);
-                tvPompaStatus.setText("Manual");
-                tvPompaStatus.setTextColor(getColor(R.color.text_hint));
-            }
         });
 
-        switchKranAir.setOnCheckedChangeListener(
-                (buttonView, isChecked) -> publishMQTT("smartfarm/kontrol/kran_air", isChecked ? "ON" : "OFF"));
+        // Kontrol manual valve
+        switchKranAir.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressSwitchListener) return;
+            publishMQTT("smartfarm/kontrol/kran_air", isChecked ? "ON" : "OFF");
+        });
 
-        switchKranInsek.setOnCheckedChangeListener(
-                (buttonView, isChecked) -> publishMQTT("smartfarm/kontrol/kran_insektisida", isChecked ? "ON" : "OFF"));
+        switchKranInsek.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressSwitchListener) return;
+            publishMQTT("smartfarm/kontrol/kran_insektisida", isChecked ? "ON" : "OFF");
+        });
 
-        switchKranPupuk.setOnCheckedChangeListener(
-                (buttonView, isChecked) -> publishMQTT("smartfarm/kontrol/kran_pupuk", isChecked ? "ON" : "OFF"));
+        switchKranPupuk.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressSwitchListener) return;
+            publishMQTT("smartfarm/kontrol/kran_pupuk", isChecked ? "ON" : "OFF");
+        });
 
-        switchKranBuang.setOnCheckedChangeListener(
-                (buttonView, isChecked) -> publishMQTT("smartfarm/kontrol/kran_pembuangan", isChecked ? "ON" : "OFF"));
+        switchKranBuang.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressSwitchListener) return;
+            publishMQTT("smartfarm/kontrol/kran_pembuangan", isChecked ? "ON" : "OFF");
+        });
 
         switchSumberDaya.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressSwitchListener) return;
             String source = isChecked ? "AKI" : "PLN";
             publishMQTT("smartfarm/kontrol/sumber_daya", source);
         });
 
-        // Stop all timers button
-        btnStopAllTimers.setOnClickListener(v -> confirmStopAllTimers());
+        // Tombol sync jadwal dari MCU
+        btnStopAllTimers.setOnClickListener(v -> {
+            scheduleManager.requestSyncFromMcu();
+            Toast.makeText(this, "🔄 Sinkronisasi jadwal dari MCU...",
+                    Toast.LENGTH_SHORT).show();
+        });
     }
 
     private void setupTimerButtons() {
@@ -278,37 +284,12 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         btnTimerKranBuang.setOnClickListener(v -> showScheduleListDialog("Kran Pembuangan", 4));
     }
 
-    // ==================== SCHEDULE LIST DIALOG (MULTI-SCHEDULE) ====================
+    // ==================== SCHEDULE LIST DIALOG ====================
 
     /**
      * Menampilkan dialog daftar jadwal untuk valve tertentu.
-     * Dari sini user bisa: melihat semua jadwal, menambah, mengedit, menghapus, enable/disable.
      */
     private void showScheduleListDialog(String valveName, int valveIndex) {
-        // Jika timer sedang berjalan, tawarkan opsi hentikan
-        if (scheduleManager.isTimerActive(valveIndex)) {
-            new MaterialAlertDialogBuilder(this)
-                    .setTitle("Timer " + valveName + " Aktif")
-                    .setMessage("Timer sedang berjalan. Hentikan timer?")
-                    .setPositiveButton("Hentikan", (dialog, which) -> {
-                        scheduleManager.stopValve(valveIndex);
-                        Toast.makeText(this, "Timer " + valveName + " dihentikan",
-                                Toast.LENGTH_SHORT).show();
-                        // Tampilkan dialog jadwal setelah timer dihentikan
-                        showScheduleListDialogInternal(valveName, valveIndex);
-                    })
-                    .setNegativeButton("Batal", null)
-                    .show();
-            return;
-        }
-
-        showScheduleListDialogInternal(valveName, valveIndex);
-    }
-
-    /**
-     * Internal: build & show dialog daftar jadwal.
-     */
-    private void showScheduleListDialogInternal(String valveName, int valveIndex) {
         View dialogView = LayoutInflater.from(this)
                 .inflate(R.layout.dialog_schedule_list, null);
 
@@ -316,24 +297,27 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         TextView tvTitle = dialogView.findViewById(R.id.tvDialogListTitle);
         TextView tvSubtitle = dialogView.findViewById(R.id.tvDialogListSubtitle);
         tvTitle.setText("Jadwal " + valveName);
-        tvSubtitle.setText("Kelola jadwal penyiraman " + valveName.toLowerCase());
+        tvSubtitle.setText("Jadwal disimpan & dijalankan oleh mikrokontroler");
 
         LinearLayout layoutScheduleList = dialogView.findViewById(R.id.layoutScheduleList);
         LinearLayout layoutEmptyState = dialogView.findViewById(R.id.layoutEmptyState);
         MaterialButton btnAddSchedule = dialogView.findViewById(R.id.btnAddSchedule);
 
-        // Build dialog
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setView(dialogView)
+                .setNeutralButton("🔄 Sync MCU", (d, w) -> {
+                    scheduleManager.requestSyncFromMcu();
+                    Toast.makeText(this, "🔄 Sinkronisasi dari MCU...",
+                            Toast.LENGTH_SHORT).show();
+                })
                 .setNegativeButton("Tutup", null)
                 .create();
 
-        // Simpan reference untuk refresh
         activeScheduleListDialog = dialog;
-        activeScheduleListValveIndex = valveIndex;
 
         // Populate list
-        populateScheduleList(layoutScheduleList, layoutEmptyState, valveName, valveIndex, dialog);
+        populateScheduleList(layoutScheduleList, layoutEmptyState,
+                valveName, valveIndex, dialog);
 
         // Add schedule button
         btnAddSchedule.setOnClickListener(v -> {
@@ -345,25 +329,21 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
                 return;
             }
             showAddEditScheduleDialog(valveName, valveIndex, null, () -> {
-                // Refresh list setelah jadwal ditambah
                 populateScheduleList(layoutScheduleList, layoutEmptyState,
                         valveName, valveIndex, dialog);
             });
         });
 
-        dialog.setOnDismissListener(d -> {
-            activeScheduleListDialog = null;
-            activeScheduleListValveIndex = -1;
-        });
-
+        dialog.setOnDismissListener(d -> activeScheduleListDialog = null);
         dialog.show();
     }
 
     /**
-     * Populate (atau refresh) daftar jadwal di dialog list.
+     * Populate daftar jadwal di dialog.
      */
     private void populateScheduleList(LinearLayout container, LinearLayout emptyState,
-                                       String valveName, int valveIndex, AlertDialog parentDialog) {
+                                       String valveName, int valveIndex,
+                                       AlertDialog parentDialog) {
         container.removeAllViews();
         List<ScheduleConfig> schedules = scheduleManager.getScheduleList(valveIndex);
 
@@ -376,8 +356,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         emptyState.setVisibility(View.GONE);
         container.setVisibility(View.VISIBLE);
 
-        for (int i = 0; i < schedules.size(); i++) {
-            ScheduleConfig config = schedules.get(i);
+        for (ScheduleConfig config : schedules) {
             View itemView = LayoutInflater.from(this)
                     .inflate(R.layout.item_schedule, container, false);
 
@@ -386,20 +365,20 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             MaterialSwitch switchEnabled = itemView.findViewById(R.id.switchScheduleEnabled);
             ImageView btnDelete = itemView.findViewById(R.id.btnDeleteSchedule);
 
-            // Set data
             tvTime.setText(config.getTimeRangeDisplayText());
             tvDays.setText(config.getDaysDisplayText());
             switchEnabled.setChecked(config.isEnabled());
 
-            // Dimmed styling jika disabled
             float alpha = config.isEnabled() ? 1.0f : 0.5f;
             tvTime.setAlpha(alpha);
             tvDays.setAlpha(alpha);
 
-            // Klik item -> edit jadwal
             final int scheduleId = config.getId();
+
+            // Klik item → edit jadwal
             itemView.setOnClickListener(v -> {
-                ScheduleConfig editConfig = scheduleManager.getScheduleById(valveIndex, scheduleId);
+                ScheduleConfig editConfig = scheduleManager.getScheduleById(
+                        valveIndex, scheduleId);
                 if (editConfig != null) {
                     showAddEditScheduleDialog(valveName, valveIndex, editConfig, () -> {
                         populateScheduleList(container, emptyState,
@@ -408,29 +387,30 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
                 }
             });
 
-            // Toggle enable/disable
+            // Toggle enable/disable → kirim update ke MCU
             switchEnabled.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                ScheduleConfig toggleConfig = scheduleManager.getScheduleById(valveIndex, scheduleId);
+                ScheduleConfig toggleConfig = scheduleManager.getScheduleById(
+                        valveIndex, scheduleId);
                 if (toggleConfig != null) {
                     toggleConfig.setEnabled(isChecked);
                     scheduleManager.updateSchedule(valveIndex, toggleConfig);
-                    // Update styling
                     float newAlpha = isChecked ? 1.0f : 0.5f;
                     tvTime.setAlpha(newAlpha);
                     tvDays.setAlpha(newAlpha);
                 }
             });
 
-            // Delete button
+            // Delete → kirim hapus ke MCU
             btnDelete.setOnClickListener(v -> {
                 new MaterialAlertDialogBuilder(this)
                         .setTitle("Hapus Jadwal")
-                        .setMessage("Hapus jadwal " + config.getTimeRangeDisplayText() + "?")
+                        .setMessage("Hapus jadwal " + config.getTimeRangeDisplayText()
+                                + " dari mikrokontroler?")
                         .setPositiveButton("Hapus", (dialog, which) -> {
                             scheduleManager.removeSchedule(valveIndex, scheduleId);
                             populateScheduleList(container, emptyState,
                                     valveName, valveIndex, parentDialog);
-                            Toast.makeText(this, "Jadwal dihapus",
+                            Toast.makeText(this, "Jadwal dihapus dari MCU",
                                     Toast.LENGTH_SHORT).show();
                         })
                         .setNegativeButton("Batal", null)
@@ -444,19 +424,13 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     // ==================== ADD/EDIT SCHEDULE DIALOG ====================
 
     /**
-     * Menampilkan dialog untuk menambah atau mengedit satu jadwal.
-     *
-     * @param valveName    Nama valve untuk judul
-     * @param valveIndex   Index valve (1-4)
-     * @param existingConfig Jadwal yang diedit, atau null untuk jadwal baru
-     * @param onSaved      Callback yang dipanggil setelah jadwal disimpan
+     * Dialog tambah/edit jadwal. Setelah disimpan, jadwal dikirim ke MCU via MQTT.
      */
     private void showAddEditScheduleDialog(String valveName, int valveIndex,
                                             ScheduleConfig existingConfig,
                                             Runnable onSaved) {
         boolean isEdit = (existingConfig != null);
 
-        // Inflate dialog layout
         View dialogView = LayoutInflater.from(this)
                 .inflate(R.layout.dialog_set_schedule, null);
 
@@ -478,7 +452,6 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         Chip chipSabtu = dialogView.findViewById(R.id.chipSabtu);
         Chip chipMinggu = dialogView.findViewById(R.id.chipMinggu);
 
-        // Map chip to Calendar constant
         final int[][] chipDayMap = {
                 { chipSenin.getId(), Calendar.MONDAY },
                 { chipSelasa.getId(), Calendar.TUESDAY },
@@ -492,9 +465,10 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         Chip[] allChips = { chipSenin, chipSelasa, chipRabu, chipKamis,
                 chipJumat, chipSabtu, chipMinggu };
 
-        // Setup title
-        tvTitle.setText(isEdit ? "Edit Jadwal " + valveName : "Tambah Jadwal " + valveName);
-        tvSubtitle.setText("Pompa akan otomatis menyala bersama " + valveName);
+        // Title
+        tvTitle.setText(isEdit ? "Edit Jadwal " + valveName
+                : "Tambah Jadwal " + valveName);
+        tvSubtitle.setText("Jadwal akan dikirim ke mikrokontroler");
 
         // Pre-fill jika edit
         if (isEdit) {
@@ -510,7 +484,6 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
                 timePickerEnd.setCurrentMinute(existingConfig.getEndMinute());
             }
 
-            // Check chips sesuai hari yang tersimpan
             for (Chip chip : allChips) {
                 for (int[] mapping : chipDayMap) {
                     if (mapping[0] == chip.getId()) {
@@ -521,10 +494,10 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             }
         }
 
-        // Build & show dialog
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
+        // Build dialog
+        new MaterialAlertDialogBuilder(this)
                 .setView(dialogView)
-                .setPositiveButton("Simpan", (dialog, which) -> {
+                .setPositiveButton("Kirim ke MCU", (dialog, which) -> {
                     int startHour, startMinute, endHour, endMinute;
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         startHour = timePickerStart.getHour();
@@ -538,7 +511,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
                         endMinute = timePickerEnd.getCurrentMinute();
                     }
 
-                    // Kumpulkan hari yang dipilih
+                    // Kumpulkan hari
                     Set<Integer> selectedDays = new LinkedHashSet<>();
                     for (Chip chip : allChips) {
                         if (chip.isChecked()) {
@@ -557,112 +530,31 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
                         return;
                     }
 
-                    // Buat config
                     ScheduleConfig config = new ScheduleConfig(
-                            selectedDays, startHour, startMinute, endHour, endMinute, true);
+                            selectedDays, startHour, startMinute,
+                            endHour, endMinute, true);
 
                     if (!config.hasValidDuration()) {
-                        Toast.makeText(this, "Jam mulai dan jam selesai tidak boleh sama",
+                        Toast.makeText(this,
+                                "Jam mulai dan jam selesai tidak boleh sama",
                                 Toast.LENGTH_SHORT).show();
                         return;
                     }
 
                     if (isEdit) {
-                        // Update jadwal yang ada
                         config.setId(existingConfig.getId());
                         scheduleManager.updateSchedule(valveIndex, config);
                         Toast.makeText(this,
-                                "✅ Jadwal diperbarui: " + config.getTimeRangeDisplayText(),
+                                "✅ Jadwal diperbarui & dikirim ke MCU",
                                 Toast.LENGTH_SHORT).show();
                     } else {
-                        // Tambah jadwal baru
                         scheduleManager.addSchedule(valveIndex, config);
                         Toast.makeText(this,
-                                "✅ Jadwal ditambahkan: " + config.getDaysDisplayText()
-                                        + " • " + config.getTimeRangeDisplayText(),
+                                "✅ Jadwal ditambah & dikirim ke MCU",
                                 Toast.LENGTH_SHORT).show();
                     }
 
-                    // Callback refresh
-                    if (onSaved != null) {
-                        onSaved.run();
-                    }
-                })
-                .setNegativeButton("Batal", null);
-
-        // Tambahkan tombol "Jalankan Sekarang" hanya untuk jadwal baru
-        if (!isEdit) {
-            builder.setNeutralButton("Jalankan Sekarang", (dialog, which) -> {
-                int startHour, startMinute, endHour, endMinute;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    startHour = timePickerStart.getHour();
-                    startMinute = timePickerStart.getMinute();
-                    endHour = timePickerEnd.getHour();
-                    endMinute = timePickerEnd.getMinute();
-                } else {
-                    startHour = timePickerStart.getCurrentHour();
-                    startMinute = timePickerStart.getCurrentMinute();
-                    endHour = timePickerEnd.getCurrentHour();
-                    endMinute = timePickerEnd.getCurrentMinute();
-                }
-
-                Set<Integer> selectedDays = new LinkedHashSet<>();
-                for (Chip chip : allChips) {
-                    if (chip.isChecked()) {
-                        for (int[] mapping : chipDayMap) {
-                            if (mapping[0] == chip.getId()) {
-                                selectedDays.add(mapping[1]);
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                ScheduleConfig config = new ScheduleConfig(
-                        selectedDays, startHour, startMinute, endHour, endMinute,
-                        !selectedDays.isEmpty());
-
-                if (!config.hasValidDuration()) {
-                    Toast.makeText(this, "Jam mulai dan jam selesai tidak boleh sama",
-                            Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                // Simpan jadwal (jika ada hari dipilih)
-                if (!selectedDays.isEmpty()) {
-                    scheduleManager.addSchedule(valveIndex, config);
-                }
-
-                // Langsung jalankan timer sekarang
-                long totalMs = config.getTotalDurationMs();
-                scheduleManager.startValveWithDuration(valveIndex, totalMs);
-                showTimerStatusCard(valveIndex);
-
-                // Tutup dialog list juga
-                if (activeScheduleListDialog != null) {
-                    activeScheduleListDialog.dismiss();
-                }
-
-                Toast.makeText(this,
-                        "⏱ " + valveName + " dimulai: "
-                                + ValveScheduleManager.formatTime(totalMs),
-                        Toast.LENGTH_SHORT).show();
-            });
-        }
-
-        builder.show();
-    }
-
-    /**
-     * Konfirmasi sebelum menghentikan semua timer.
-     */
-    private void confirmStopAllTimers() {
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Hentikan Semua Timer")
-                .setMessage("Yakin ingin menghentikan semua timer aktif? Semua valve dan pompa akan dimatikan.")
-                .setPositiveButton("Hentikan Semua", (dialog, which) -> {
-                    scheduleManager.stopAllValves();
-                    Toast.makeText(this, "Semua timer dihentikan", Toast.LENGTH_SHORT).show();
+                    if (onSaved != null) onSaved.run();
                 })
                 .setNegativeButton("Batal", null)
                 .show();
@@ -671,89 +563,63 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     // ==================== SCHEDULE CALLBACK IMPLEMENTATION ====================
 
     @Override
-    public void onValveSwitched(int valveIndex, boolean turnOn) {
-        getValveSwitch(valveIndex).setChecked(turnOn);
+    public void onMqttPublishRequested(String topic, String payload) {
+        publishMQTT(topic, payload);
     }
 
     @Override
-    public void onCountdownTick(int valveIndex, long millisRemaining, String formattedTime) {
-        // Update countdown text di bawah valve
+    public void onValveStateChanged(int valveIndex, boolean isOn) {
+        // Update switch UI tanpa trigger listener
+        suppressSwitchListener = true;
+        getValveSwitch(valveIndex).setChecked(isOn);
+        suppressSwitchListener = false;
+
+        // Update status card untuk menunjukkan valve aktif dari MCU
+        updateActiveStatusCard();
+
+        // Update schedule display
         TextView tv = getCountdownTextView(valveIndex);
-        if (tv != null) {
-            tv.setText("⏱ Sisa: " + formattedTime);
+        if (tv != null && isOn) {
+            tv.setText("🟢 Aktif (oleh MCU)");
             tv.setTextColor(getColor(R.color.status_info));
+        } else if (tv != null && !isOn) {
+            refreshScheduleDisplay(valveIndex);
         }
-
-        // Update status card
-        updateTimerStatusCard(valveIndex, formattedTime);
     }
 
     @Override
-    public void onTimerFinished(int valveIndex) {
-        String valveName = ValveScheduleManager.getValveName(valveIndex);
+    public void onPumpStateChanged(boolean isOn, String statusText) {
+        suppressSwitchListener = true;
+        switchPompa.setChecked(isOn);
+        suppressSwitchListener = false;
 
-        // Update countdown text
-        TextView tv = getCountdownTextView(valveIndex);
-        if (tv != null) {
-            tv.setText("✅ Selesai");
-            tv.setTextColor(getColor(R.color.status_good));
-        }
-
-        // Sembunyikan dari status card
-        hideTimerStatusRow(valveIndex);
-
-        Toast.makeText(this, "Timer " + valveName + " selesai", Toast.LENGTH_SHORT).show();
-
-        // Kirim notifikasi
-        NotificationHelper.sendWarningNotification(
-                this,
-                NotificationHelper.CHANNEL_MEDIA_TANAH,
-                3000 + valveIndex,
-                "✅ Timer " + valveName + " Selesai",
-                valveName + " telah dimatikan otomatis setelah durasi selesai.",
-                MediaTanahActivity.class);
-
-        // Kembalikan tampilan jadwal setelah delay singkat
-        tv.postDelayed(() -> refreshScheduleDisplay(valveIndex), 3000);
-    }
-
-    @Override
-    public void onPumpAutoControl(boolean turnOn, String statusText) {
-        switchPompa.setChecked(turnOn);
         tvPompaStatus.setText(statusText);
         tvPompaStatus.setTextColor(getColor(
-                turnOn ? R.color.status_info : R.color.text_hint));
+                isOn ? R.color.status_info : R.color.text_hint));
     }
 
     @Override
-    public void onScheduleUpdated(int valveIndex, ScheduleConfig config) {
+    public void onScheduleListChanged(int valveIndex) {
         refreshScheduleDisplay(valveIndex);
-    }
-
-    @Override
-    public void onAllTimersFinished() {
-        cardJadwalStatus.setVisibility(View.GONE);
     }
 
     // ==================== UI HELPER METHODS ====================
 
     /**
      * Refresh tampilan jadwal untuk satu valve.
-     * Menampilkan ringkasan dari semua jadwal valve.
      */
     private void refreshScheduleDisplay(int valveIndex) {
-        if (scheduleManager.isTimerActive(valveIndex)) {
-            return; // Jangan overwrite countdown yang sedang jalan
+        // Jika valve sedang ON dari MCU, jangan overwrite
+        if (scheduleManager.isValveOn(valveIndex)) {
+            return;
         }
 
         TextView tv = getCountdownTextView(valveIndex);
-        if (tv == null)
-            return;
+        if (tv == null) return;
 
         String summary = scheduleManager.getScheduleSummaryText(valveIndex);
         tv.setText(summary);
 
-        // Determine color
         List<ScheduleConfig> list = scheduleManager.getScheduleList(valveIndex);
         boolean hasActiveToday = false;
         for (ScheduleConfig config : list) {
@@ -772,9 +638,6 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         }
     }
 
-    /**
-     * Refresh tampilan jadwal untuk semua valve.
-     */
     private void refreshAllScheduleDisplays() {
         for (int i = 1; i <= ValveScheduleManager.VALVE_COUNT; i++) {
             refreshScheduleDisplay(i);
@@ -782,96 +645,58 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     }
 
     /**
-     * Dapatkan MaterialSwitch valve berdasarkan index.
+     * Update status card berdasarkan valve yang sedang aktif dari MCU.
      */
+    private void updateActiveStatusCard() {
+        boolean anyActive = scheduleManager.hasActiveValves();
+
+        if (anyActive) {
+            cardJadwalStatus.setVisibility(View.VISIBLE);
+
+            // Pompa
+            if (scheduleManager.isPumpOn()) {
+                layoutPompaTimerStatus.setVisibility(View.VISIBLE);
+                tvPompaTimerStatus.setText("Aktif (MCU)");
+            } else {
+                layoutPompaTimerStatus.setVisibility(View.GONE);
+            }
+
+            // Valve 1-4
+            updateValveStatusRow(1, layoutKranAirTimerStatus, tvKranAirTimerStatus);
+            updateValveStatusRow(2, layoutKranInsekTimerStatus, tvKranInsekTimerStatus);
+            updateValveStatusRow(3, layoutKranPupukTimerStatus, tvKranPupukTimerStatus);
+            updateValveStatusRow(4, layoutKranBuangTimerStatus, tvKranBuangTimerStatus);
+        } else {
+            cardJadwalStatus.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateValveStatusRow(int valveIndex, LinearLayout layout, TextView tvStatus) {
+        if (scheduleManager.isValveOn(valveIndex)) {
+            layout.setVisibility(View.VISIBLE);
+            tvStatus.setText("🟢 ON");
+        } else {
+            layout.setVisibility(View.GONE);
+        }
+    }
+
     private MaterialSwitch getValveSwitch(int valveIndex) {
         switch (valveIndex) {
-            case 1:
-                return switchKranAir;
-            case 2:
-                return switchKranInsek;
-            case 3:
-                return switchKranPupuk;
-            case 4:
-                return switchKranBuang;
-            default:
-                return switchKranAir;
+            case 1: return switchKranAir;
+            case 2: return switchKranInsek;
+            case 3: return switchKranPupuk;
+            case 4: return switchKranBuang;
+            default: return switchKranAir;
         }
     }
 
-    /**
-     * Dapatkan TextView countdown berdasarkan index valve.
-     */
     private TextView getCountdownTextView(int valveIndex) {
         switch (valveIndex) {
-            case 1:
-                return tvCountdownKranAir;
-            case 2:
-                return tvCountdownKranInsek;
-            case 3:
-                return tvCountdownKranPupuk;
-            case 4:
-                return tvCountdownKranBuang;
-            default:
-                return null;
-        }
-    }
-
-    private void showTimerStatusCard(int valveIndex) {
-        cardJadwalStatus.setVisibility(View.VISIBLE);
-        layoutPompaTimerStatus.setVisibility(View.VISIBLE);
-        tvPompaTimerStatus.setText("Aktif (otomatis)");
-
-        switch (valveIndex) {
-            case 1:
-                layoutKranAirTimerStatus.setVisibility(View.VISIBLE);
-                break;
-            case 2:
-                layoutKranInsekTimerStatus.setVisibility(View.VISIBLE);
-                break;
-            case 3:
-                layoutKranPupukTimerStatus.setVisibility(View.VISIBLE);
-                break;
-            case 4:
-                layoutKranBuangTimerStatus.setVisibility(View.VISIBLE);
-                break;
-        }
-    }
-
-    private void updateTimerStatusCard(int valveIndex, String timeStr) {
-        switch (valveIndex) {
-            case 1:
-                tvKranAirTimerStatus.setText(timeStr);
-                break;
-            case 2:
-                tvKranInsekTimerStatus.setText(timeStr);
-                break;
-            case 3:
-                tvKranPupukTimerStatus.setText(timeStr);
-                break;
-            case 4:
-                tvKranBuangTimerStatus.setText(timeStr);
-                break;
-        }
-    }
-
-    private void hideTimerStatusRow(int valveIndex) {
-        switch (valveIndex) {
-            case 1:
-                layoutKranAirTimerStatus.setVisibility(View.GONE);
-                break;
-            case 2:
-                layoutKranInsekTimerStatus.setVisibility(View.GONE);
-                break;
-            case 3:
-                layoutKranPupukTimerStatus.setVisibility(View.GONE);
-                break;
-            case 4:
-                layoutKranBuangTimerStatus.setVisibility(View.GONE);
-                break;
-        }
-        if (!scheduleManager.hasActiveTimers()) {
-            layoutPompaTimerStatus.setVisibility(View.GONE);
+            case 1: return tvCountdownKranAir;
+            case 2: return tvCountdownKranInsek;
+            case 3: return tvCountdownKranPupuk;
+            case 4: return tvCountdownKranBuang;
+            default: return null;
         }
     }
 
