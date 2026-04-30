@@ -84,7 +84,7 @@
                         android:layout_height="44dp"
                         android:layout_alignParentEnd="true"
                         android:layout_alignParentTop="true"
-                        android:background="@drawable/bg_icon_circle_green">
+                        android:background="@drawable/bg_icon_circle_brown">
 
                         <ImageView
                             android:layout_width="24dp"
@@ -108,7 +108,7 @@
                             android:id="@+id/tvKelembapan"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text=""
+                            android:text="-"
                             android:textSize="40sp"
                             android:textStyle="bold"
                             android:textColor="#1B1F1B" />
@@ -231,7 +231,7 @@
                         android:layout_height="wrap_content"
                         android:layout_below="@id/labelPH"
                         android:layout_marginTop="8dp"
-                        android:text="6.5"
+                        android:text="-"
                         android:textSize="40sp"
                         android:textStyle="bold"
                         android:textColor="#1B1F1B" />
@@ -297,6 +297,136 @@
                 </RelativeLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- ============ CARD: Suhu Udara ============ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                android:layout_marginBottom="16dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="20dp">
+
+                    <!-- Title -->
+                    <TextView
+                        android:id="@+id/labelSuhu"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Suhu Udara"
+                        android:textSize="14sp"
+                        android:textColor="#757575"
+                        android:layout_alignParentStart="true"
+                        android:layout_alignParentTop="true" />
+
+                    <!-- Icon -->
+                    <FrameLayout
+                        android:id="@+id/iconSuhu"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_alignParentTop="true"
+                        android:background="@drawable/bg_icon_circle_orange">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_temperature"
+                            android:contentDescription="Temperature Icon" />
+                    </FrameLayout>
+
+                    <!-- Value -->
+                    <LinearLayout
+                        android:id="@+id/valueSuhu"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/labelSuhu"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal"
+                        android:baselineAligned="true">
+
+                        <TextView
+                            android:id="@+id/tvSuhu"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="-"
+                            android:textSize="40sp"
+                            android:textStyle="bold"
+                            android:textColor="#1B1F1B" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=" °C"
+                            android:textSize="18sp"
+                            android:textColor="#757575" />
+                    </LinearLayout>
+
+                    <!-- Progress Bar -->
+                    <ProgressBar
+                        android:id="@+id/progressSuhu"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_below="@id/valueSuhu"
+                        android:layout_marginTop="12dp"
+                        android:max="60"
+                        android:progress="0"
+                        android:progressDrawable="@drawable/progress_bar_orange" />
+
+                    <!-- Scale labels -->
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/progressSuhu"
+                        android:layout_marginTop="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textSize="12sp"
+                            android:textColor="#9E9E9E"
+                            android:layout_alignParentStart="true" />
+
+                        <!-- Optimal indicator -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_centerHorizontal="true"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <View
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:background="@drawable/bg_icon_circle_green" />
+
+                            <TextView
+                                android:id="@+id/tvStatusSuhu"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Ideal"
+                                android:textSize="12sp"
+                                android:textColor="#4CAF50"
+                                android:layout_marginStart="4dp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="60"
+                            android:textSize="12sp"
+                            android:textColor="#9E9E9E"
+                            android:layout_alignParentEnd="true" />
+                    </RelativeLayout>
+                </RelativeLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- ============ CARD: Sumber Daya ============ -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
@@ -329,7 +459,7 @@
                         android:layout_height="44dp"
                         android:layout_alignParentEnd="true"
                         android:layout_alignParentTop="true"
-                        android:background="@drawable/bg_icon_circle_orange">
+                        android:background="@color/white">
 
                         <ImageView
                             android:layout_width="24dp"

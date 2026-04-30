@@ -30,6 +30,8 @@ public class NotificationHelper {
     public static final int NOTIF_KELEMBAPAN_TINGGI = 1002;
     public static final int NOTIF_PH_TANAH_ASAM = 1003;
     public static final int NOTIF_PH_TANAH_BASA = 1004;
+    public static final int NOTIF_SUHU_PANAS = 1005;
+    public static final int NOTIF_SUHU_DINGIN = 1006;
     public static final int NOTIF_PH_AIR_ASAM = 2001;
     public static final int NOTIF_PH_AIR_BASA = 2002;
     public static final int NOTIF_NUTRISI_KURANG = 2003;

@@ -64,8 +64,8 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     // ==================== VIEWS ====================
 
     // Sensor views
-    private TextView tvKelembapan, tvPH, tvStatusKelembapan, tvStatusPH;
-    private ProgressBar progressKelembapan, progressPH;
+    private TextView tvKelembapan, tvPH, tvSuhu, tvStatusKelembapan, tvStatusPH, tvStatusSuhu;
+    private ProgressBar progressKelembapan, progressPH, progressSuhu;
 
     // Switch views
     private MaterialSwitch switchKranAir, switchKranInsek, switchKranPupuk, switchKranBuang;
@@ -174,6 +174,9 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             case "smartfarm/kontrol/ph":
                 updatePH(payload);
                 return;
+            case "smartfarm/sensor/data":
+                handleSensorData(payload);
+                return;
         }
 
         // Handle jadwal & status dari MCU via manager
@@ -219,10 +222,13 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         // Sensor views
         tvKelembapan = findViewById(R.id.tvKelembapan);
         tvPH = findViewById(R.id.tvPH);
+        tvSuhu = findViewById(R.id.tvSuhu);
         tvStatusKelembapan = findViewById(R.id.tvStatusKelembapan);
         tvStatusPH = findViewById(R.id.tvStatusPH);
+        tvStatusSuhu = findViewById(R.id.tvStatusSuhu);
         progressKelembapan = findViewById(R.id.progressKelembapan);
         progressPH = findViewById(R.id.progressPH);
+        progressSuhu = findViewById(R.id.progressSuhu);
 
         // Switch views
         tvPompaOnOff = findViewById(R.id.tvPompaOnOff);
@@ -759,6 +765,22 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
 
     // ==================== SENSOR MONITORING ====================
 
+    /**
+     * Handle data sensor JSON dari topic smartfarm/sensor/data.
+     * Format payload: {"temp": 0.0, "hum": 0.0}
+     */
+    private void handleSensorData(String payload) {
+        try {
+            JSONObject json = new JSONObject(payload);
+            double temp = json.optDouble("temp", -999);
+            if (temp != -999) {
+                updateSuhu(String.valueOf(temp));
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Invalid sensor data JSON: " + payload, e);
+        }
+    }
+
     private void updateKelembapan(String value) {
         try {
             float kelembapan = Float.parseFloat(value);
@@ -831,6 +853,43 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             }
         } catch (NumberFormatException e) {
             Log.e(TAG, "Invalid pH value: " + value);
+        }
+    }
+
+    private void updateSuhu(String value) {
+        try {
+            float suhu = Float.parseFloat(value);
+            tvSuhu.setText(String.valueOf(suhu));
+            progressSuhu.setProgress(Math.round(suhu));
+
+            if (suhu >= 15 && suhu <= 35) {
+                tvStatusSuhu.setText("Ideal");
+                tvStatusSuhu.setTextColor(getColor(R.color.status_good));
+                NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_SUHU_PANAS);
+                NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_SUHU_DINGIN);
+            } else if (suhu > 35) {
+                tvStatusSuhu.setText("Panas");
+                tvStatusSuhu.setTextColor(getColor(R.color.status_danger));
+                NotificationHelper.sendWarningNotification(
+                        this, NotificationHelper.CHANNEL_MEDIA_TANAH,
+                        NotificationHelper.NOTIF_SUHU_PANAS,
+                        "🌡️ Suhu Udara Terlalu Panas!",
+                        "Suhu udara saat ini " + suhu + "°C (di atas 35°C). "
+                                + "Kondisi terlalu panas, pertimbangkan untuk menambah naungan!",
+                        MediaTanahActivity.class);
+            } else {
+                tvStatusSuhu.setText("Dingin");
+                tvStatusSuhu.setTextColor(getColor(R.color.status_warning));
+                NotificationHelper.sendWarningNotification(
+                        this, NotificationHelper.CHANNEL_MEDIA_TANAH,
+                        NotificationHelper.NOTIF_SUHU_DINGIN,
+                        "🌡️ Suhu Udara Terlalu Dingin!",
+                        "Suhu udara saat ini " + suhu + "°C (di bawah 15°C). "
+                                + "Kondisi terlalu dingin, pertimbangkan untuk menambah penutup!",
+                        MediaTanahActivity.class);
+            }
+        } catch (NumberFormatException e) {
+            Log.e(TAG, "Invalid suhu value: " + value);
         }
     }
 }
