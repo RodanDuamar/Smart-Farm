@@ -32,6 +32,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.json.JSONObject;
+
 /**
  * Activity untuk monitoring dan kontrol sistem irigasi Media Tanah.
  *
@@ -42,15 +44,17 @@ import java.util.Set;
  * - App menerima status terkini dari MCU untuk sinkronisasi tampilan.
  *
  * MQTT Subscribe:
- * - smartfarm/sensor/#          → data sensor (kelembapan, pH)
- * - smartfarm/jadwal/state      → daftar jadwal dari MCU
- * - smartfarm/status/valves     → status ON/OFF valve & pompa dari MCU
+ * - smartfarm/kontrol/kelembapan  → data sensor kelembapan tanah
+ * - smartfarm/kontrol/ph          → data sensor pH tanah
+ * - smartfarm/sensor/data         → data sensor suhu & kelembapan udara (JSON)
+ * - smartfarm/jadwal/state        → daftar jadwal dari MCU
+ * - smartfarm/status/valves       → status ON/OFF valve & pompa dari MCU
  *
  * MQTT Publish:
- * - smartfarm/jadwal/set        → kirim jadwal ke MCU
- * - smartfarm/jadwal/delete     → hapus jadwal dari MCU
- * - smartfarm/jadwal/sync       → request sinkronisasi
- * - smartfarm/kontrol/*         → kontrol manual valve/pompa
+ * - smartfarm/jadwal/set          → kirim jadwal ke MCU
+ * - smartfarm/jadwal/delete       → hapus jadwal dari MCU
+ * - smartfarm/jadwal/sync         → request sinkronisasi
+ * - smartfarm/kontrol/*           → kontrol manual valve/pompa
  */
 public class MediaTanahActivity extends BaseSmartFarmActivity
         implements ValveScheduleManager.ScheduleCallback {
@@ -64,7 +68,8 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     private ProgressBar progressKelembapan, progressPH;
 
     // Switch views
-    private MaterialSwitch switchPompa, switchKranAir, switchKranInsek, switchKranPupuk, switchKranBuang;
+    private MaterialSwitch switchKranAir, switchKranInsek, switchKranPupuk, switchKranBuang;
+    private TextView tvPompaOnOff;
     private MaterialSwitch switchSumberDaya;
 
     // Timer/schedule buttons
@@ -82,7 +87,6 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     private TextView tvPompaTimerStatus;
     private TextView tvKranAirTimerStatus, tvKranInsekTimerStatus;
     private TextView tvKranPupukTimerStatus, tvKranBuangTimerStatus;
-    private TextView btnStopAllTimers;
 
     // ==================== MANAGER ====================
 
@@ -127,9 +131,6 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
 
         // Tampilkan jadwal dari cache lokal
         refreshAllScheduleDisplays();
-
-        // Request sinkronisasi jadwal terkini dari MCU
-        scheduleManager.requestSyncFromMcu();
     }
 
     @Override
@@ -165,12 +166,12 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
 
     @Override
     protected void onMqttMessageReceived(String topic, String payload) {
-        // Handle sensor data
+        // Handle sensor data (topik sesuai dengan yang dipublish MCU)
         switch (topic) {
-            case "smartfarm/sensor/kelembapan":
+            case "smartfarm/kontrol/kelembapan":
                 updateKelembapan(payload);
                 return;
-            case "smartfarm/sensor/ph":
+            case "smartfarm/kontrol/ph":
                 updatePH(payload);
                 return;
         }
@@ -183,12 +184,18 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     }
 
     @Override
+    protected void onMqttConnected() {
+        // Otomatis sync jadwal setiap kali MQTT berhasil terkoneksi
+        if (scheduleManager != null) {
+            scheduleManager.requestSyncFromMcu();
+        }
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         if (scheduleManager != null) {
             refreshAllScheduleDisplays();
-            // Request sinkronisasi saat app kembali ke foreground
-            scheduleManager.requestSyncFromMcu();
         }
     }
 
@@ -218,7 +225,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         progressPH = findViewById(R.id.progressPH);
 
         // Switch views
-        switchPompa = findViewById(R.id.switchPompa);
+        tvPompaOnOff = findViewById(R.id.tvPompaOnOff);
         switchKranAir = findViewById(R.id.switchKranAir);
         switchKranInsek = findViewById(R.id.switchKranInsek);
         switchKranPupuk = findViewById(R.id.switchKranPupuk);
@@ -250,35 +257,32 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         tvKranInsekTimerStatus = findViewById(R.id.tvValve2TimerStatus);
         tvKranPupukTimerStatus = findViewById(R.id.tvValve3TimerStatus);
         tvKranBuangTimerStatus = findViewById(R.id.tvValve4TimerStatus);
-        btnStopAllTimers = findViewById(R.id.btnStopAllTimers);
     }
 
     private void setupSwitchListeners() {
-        // Kontrol manual pompa
-        switchPompa.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (suppressSwitchListener) return;
-            publishMQTT("smartfarm/kontrol/pompa", isChecked ? "ON" : "OFF");
-        });
-
-        // Kontrol manual valve
+        // Kontrol manual valve — pompa otomatis ikut valve
         switchKranAir.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (suppressSwitchListener) return;
             publishMQTT("smartfarm/kontrol/kran_air", isChecked ? "ON" : "OFF");
+            updateAutoPump();
         });
 
         switchKranInsek.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (suppressSwitchListener) return;
             publishMQTT("smartfarm/kontrol/kran_insektisida", isChecked ? "ON" : "OFF");
+            updateAutoPump();
         });
 
         switchKranPupuk.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (suppressSwitchListener) return;
             publishMQTT("smartfarm/kontrol/kran_pupuk", isChecked ? "ON" : "OFF");
+            updateAutoPump();
         });
 
         switchKranBuang.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (suppressSwitchListener) return;
             publishMQTT("smartfarm/kontrol/kran_pembuangan", isChecked ? "ON" : "OFF");
+            updateAutoPump();
         });
 
         switchSumberDaya.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -286,13 +290,20 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             String source = isChecked ? "AKI" : "PLN";
             publishMQTT("smartfarm/kontrol/sumber_daya", source);
         });
+    }
 
-        // Tombol sync jadwal dari MCU
-        btnStopAllTimers.setOnClickListener(v -> {
-            scheduleManager.requestSyncFromMcu();
-            Toast.makeText(this, "🔄 Sinkronisasi jadwal dari MCU...",
-                    Toast.LENGTH_SHORT).show();
-        });
+    /**
+     * Otomatis aktifkan pompa jika salah satu valve dinyalakan (manual).
+     * Matikan pompa jika semua valve dimatikan.
+     */
+    private void updateAutoPump() {
+        boolean anyValveOn = switchKranAir.isChecked()
+                || switchKranInsek.isChecked()
+                || switchKranPupuk.isChecked()
+                || switchKranBuang.isChecked();
+
+        publishMQTT("smartfarm/kontrol/pompa", anyValveOn ? "ON" : "OFF");
+        updatePompaStatusUI(anyValveOn);
     }
 
     private void setupTimerButtons() {
@@ -315,7 +326,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         TextView tvTitle = dialogView.findViewById(R.id.tvDialogListTitle);
         TextView tvSubtitle = dialogView.findViewById(R.id.tvDialogListSubtitle);
         tvTitle.setText("Jadwal " + valveName);
-        tvSubtitle.setText("Jadwal disimpan & dijalankan oleh mikrokontroler");
+        tvSubtitle.setText("Kelola jadwal penyiraman");
 
         LinearLayout layoutScheduleList = dialogView.findViewById(R.id.layoutScheduleList);
         LinearLayout layoutEmptyState = dialogView.findViewById(R.id.layoutEmptyState);
@@ -323,11 +334,6 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setView(dialogView)
-                .setNeutralButton("🔄 Sync MCU", (d, w) -> {
-                    scheduleManager.requestSyncFromMcu();
-                    Toast.makeText(this, "🔄 Sinkronisasi dari MCU...",
-                            Toast.LENGTH_SHORT).show();
-                })
                 .setNegativeButton("Tutup", null)
                 .create();
 
@@ -422,13 +428,12 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             btnDelete.setOnClickListener(v -> {
                 new MaterialAlertDialogBuilder(this)
                         .setTitle("Hapus Jadwal")
-                        .setMessage("Hapus jadwal " + config.getTimeRangeDisplayText()
-                                + " dari mikrokontroler?")
+                        .setMessage("Hapus jadwal " + config.getTimeRangeDisplayText() + "?")
                         .setPositiveButton("Hapus", (dialog, which) -> {
                             scheduleManager.removeSchedule(valveIndex, scheduleId);
                             populateScheduleList(container, emptyState,
                                     valveName, valveIndex, parentDialog);
-                            Toast.makeText(this, "Jadwal dihapus dari MCU",
+                            Toast.makeText(this, "Jadwal dihapus",
                                     Toast.LENGTH_SHORT).show();
                         })
                         .setNegativeButton("Batal", null)
@@ -486,7 +491,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         // Title
         tvTitle.setText(isEdit ? "Edit Jadwal " + valveName
                 : "Tambah Jadwal " + valveName);
-        tvSubtitle.setText("Jadwal akan dikirim ke mikrokontroler");
+        tvSubtitle.setText("Pompa akan otomatis menyala saat valve aktif");
 
         // Pre-fill jika edit
         if (isEdit) {
@@ -512,70 +517,78 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             }
         }
 
-        // Build dialog
-        new MaterialAlertDialogBuilder(this)
+        // Build dialog — gunakan create() + show() agar bisa override tombol
+        // untuk mencegah auto-dismiss saat validasi gagal
+        AlertDialog scheduleDialog = new MaterialAlertDialogBuilder(this)
                 .setView(dialogView)
-                .setPositiveButton("Kirim ke MCU", (dialog, which) -> {
-                    int startHour, startMinute, endHour, endMinute;
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        startHour = timePickerStart.getHour();
-                        startMinute = timePickerStart.getMinute();
-                        endHour = timePickerEnd.getHour();
-                        endMinute = timePickerEnd.getMinute();
-                    } else {
-                        startHour = timePickerStart.getCurrentHour();
-                        startMinute = timePickerStart.getCurrentMinute();
-                        endHour = timePickerEnd.getCurrentHour();
-                        endMinute = timePickerEnd.getCurrentMinute();
-                    }
+                .setPositiveButton("Simpan", null) // null dulu, override di bawah
+                .setNegativeButton("Batal", null)
+                .create();
 
-                    // Kumpulkan hari
-                    Set<Integer> selectedDays = new LinkedHashSet<>();
-                    for (Chip chip : allChips) {
-                        if (chip.isChecked()) {
-                            for (int[] mapping : chipDayMap) {
-                                if (mapping[0] == chip.getId()) {
-                                    selectedDays.add(mapping[1]);
-                                    break;
-                                }
+        scheduleDialog.setOnShowListener(dialogInterface -> {
+            scheduleDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                int startHour, startMinute, endHour, endMinute;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    startHour = timePickerStart.getHour();
+                    startMinute = timePickerStart.getMinute();
+                    endHour = timePickerEnd.getHour();
+                    endMinute = timePickerEnd.getMinute();
+                } else {
+                    startHour = timePickerStart.getCurrentHour();
+                    startMinute = timePickerStart.getCurrentMinute();
+                    endHour = timePickerEnd.getCurrentHour();
+                    endMinute = timePickerEnd.getCurrentMinute();
+                }
+
+                // Kumpulkan hari
+                Set<Integer> selectedDays = new LinkedHashSet<>();
+                for (Chip chip : allChips) {
+                    if (chip.isChecked()) {
+                        for (int[] mapping : chipDayMap) {
+                            if (mapping[0] == chip.getId()) {
+                                selectedDays.add(mapping[1]);
+                                break;
                             }
                         }
                     }
+                }
 
-                    if (selectedDays.isEmpty()) {
-                        Toast.makeText(this, "Pilih minimal 1 hari",
-                                Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+                if (selectedDays.isEmpty()) {
+                    Toast.makeText(this, "Pilih minimal 1 hari",
+                            Toast.LENGTH_SHORT).show();
+                    return; // Dialog tetap terbuka
+                }
 
-                    ScheduleConfig config = new ScheduleConfig(
-                            selectedDays, startHour, startMinute,
-                            endHour, endMinute, true);
+                ScheduleConfig config = new ScheduleConfig(
+                        selectedDays, startHour, startMinute,
+                        endHour, endMinute, true);
 
-                    if (!config.hasValidDuration()) {
-                        Toast.makeText(this,
-                                "Jam mulai dan jam selesai tidak boleh sama",
-                                Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+                if (!config.hasValidDuration()) {
+                    Toast.makeText(this,
+                            "Jam mulai dan jam selesai tidak boleh sama",
+                            Toast.LENGTH_SHORT).show();
+                    return; // Dialog tetap terbuka
+                }
 
-                    if (isEdit) {
-                        config.setId(existingConfig.getId());
-                        scheduleManager.updateSchedule(valveIndex, config);
-                        Toast.makeText(this,
-                                "✅ Jadwal diperbarui & dikirim ke MCU",
-                                Toast.LENGTH_SHORT).show();
-                    } else {
-                        scheduleManager.addSchedule(valveIndex, config);
-                        Toast.makeText(this,
-                                "✅ Jadwal ditambah & dikirim ke MCU",
-                                Toast.LENGTH_SHORT).show();
-                    }
+                if (isEdit) {
+                    config.setId(existingConfig.getId());
+                    scheduleManager.updateSchedule(valveIndex, config);
+                    Toast.makeText(this, "✅ Jadwal diperbarui",
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    scheduleManager.addSchedule(valveIndex, config);
+                    Toast.makeText(this, "✅ Jadwal ditambahkan",
+                            Toast.LENGTH_SHORT).show();
+                }
 
-                    if (onSaved != null) onSaved.run();
-                })
-                .setNegativeButton("Batal", null)
-                .show();
+                if (onSaved != null) onSaved.run();
+                
+                // Post dismiss ke message queue untuk menghindari error "inputTarget = Window"
+                v.post(() -> scheduleDialog.dismiss());
+            });
+        });
+
+        scheduleDialog.show();
     }
 
     // ==================== SCHEDULE CALLBACK IMPLEMENTATION ====================
@@ -607,18 +620,44 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
 
     @Override
     public void onPumpStateChanged(boolean isOn, String statusText) {
-        suppressSwitchListener = true;
-        switchPompa.setChecked(isOn);
-        suppressSwitchListener = false;
+        updatePompaStatusUI(isOn);
 
         tvPompaStatus.setText(statusText);
         tvPompaStatus.setTextColor(getColor(
                 isOn ? R.color.status_info : R.color.text_hint));
     }
 
+    /**
+     * Update tampilan status pompa (badge ON/OFF).
+     */
+    private void updatePompaStatusUI(boolean isOn) {
+        if (isOn) {
+            tvPompaOnOff.setText("ON");
+            tvPompaOnOff.setTextColor(getColor(R.color.status_info));
+            tvPompaOnOff.setBackgroundResource(R.drawable.bg_chip_status_active);
+        } else {
+            tvPompaOnOff.setText("OFF");
+            tvPompaOnOff.setTextColor(getColor(R.color.text_hint));
+            tvPompaOnOff.setBackgroundResource(R.drawable.bg_chip_status);
+        }
+    }
+
     @Override
     public void onScheduleListChanged(int valveIndex) {
         refreshScheduleDisplay(valveIndex);
+        
+        // Update dialog otomatis jika sedang terbuka (misal setelah sync atau hapus)
+        if (activeScheduleListDialog != null && activeScheduleListDialog.isShowing()) {
+            LinearLayout layoutScheduleList = activeScheduleListDialog.findViewById(R.id.layoutScheduleList);
+            LinearLayout layoutEmptyState = activeScheduleListDialog.findViewById(R.id.layoutEmptyState);
+            TextView tvTitle = activeScheduleListDialog.findViewById(R.id.tvDialogListTitle);
+            
+            if (layoutScheduleList != null && layoutEmptyState != null && tvTitle != null) {
+                String title = tvTitle.getText().toString();
+                String valveName = title.replace("Jadwal ", "");
+                populateScheduleList(layoutScheduleList, layoutEmptyState, valveName, valveIndex, activeScheduleListDialog);
+            }
+        }
     }
 
     // ==================== UI HELPER METHODS ====================

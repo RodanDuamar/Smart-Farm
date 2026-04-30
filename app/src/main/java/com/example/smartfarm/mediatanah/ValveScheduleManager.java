@@ -70,6 +70,9 @@ public class ValveScheduleManager {
     /** Status pompa terkini dari MCU */
     private boolean pumpState = false;
 
+    /** Waktu terakhir jadwal diubah secara lokal (untuk mencegah race condition MQTT) */
+    private long lastLocalUpdateTime = 0;
+
     /** SharedPreferences untuk cache lokal */
     private final SharedPreferences prefs;
 
@@ -140,6 +143,9 @@ public class ValveScheduleManager {
         }
         config.setId(nextId);
 
+        // Tandai waktu update lokal
+        lastLocalUpdateTime = System.currentTimeMillis();
+
         // Simpan ke cache lokal
         list.add(config);
         saveLocalCache(valveIndex);
@@ -162,6 +168,7 @@ public class ValveScheduleManager {
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i).getId() == config.getId()) {
                 list.set(i, config);
+                lastLocalUpdateTime = System.currentTimeMillis();
                 saveLocalCache(valveIndex);
 
                 // Kirim update ke MCU
@@ -187,6 +194,7 @@ public class ValveScheduleManager {
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i).getId() == scheduleId) {
                 list.remove(i);
+                lastLocalUpdateTime = System.currentTimeMillis();
                 saveLocalCache(valveIndex);
 
                 // Kirim perintah hapus ke MCU
@@ -212,6 +220,7 @@ public class ValveScheduleManager {
             publishDeleteToMcu(valveIndex, config.getId());
         }
         list.clear();
+        lastLocalUpdateTime = System.currentTimeMillis();
         saveLocalCache(valveIndex);
 
         callback.onScheduleListChanged(valveIndex);
@@ -257,6 +266,13 @@ public class ValveScheduleManager {
      * }
      */
     private void handleScheduleState(String payload) {
+        // Jika kita baru saja memodifikasi jadwal lokal (dalam 3 detik terakhir),
+        // abaikan state dari MCU karena MCU mungkin mengirim state lama yang belum terupdate.
+        if (System.currentTimeMillis() - lastLocalUpdateTime < 3000) {
+            Log.d(TAG, "Abaikan state dari MCU karena jadwal baru saja diupdate lokal");
+            return;
+        }
+
         try {
             JSONObject json = new JSONObject(payload);
             for (int i = 1; i <= VALVE_COUNT; i++) {
