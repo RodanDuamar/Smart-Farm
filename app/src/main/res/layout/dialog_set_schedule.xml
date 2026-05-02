@@ -1,233 +1,195 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:layout_height="wrap_content">
 
-    <!-- Title -->
-    <TextView
-        android:id="@+id/tvDialogTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Atur Jadwal"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="#1B5E20"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="4dp" />
-
-    <!-- Subtitle -->
-    <TextView
-        android:id="@+id/tvDialogSubtitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Pompa akan otomatis menyala"
-        android:textSize="13sp"
-        android:textColor="#757575"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="20dp" />
-
-    <!-- ======= Section: Pilih Hari ======= -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="📅 Pilih Hari"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:textColor="#424242"
-        android:layout_marginBottom="10dp" />
-
-    <!-- Day Chips Row -->
-    <com.google.android.material.chip.ChipGroup
-        android:id="@+id/chipGroupDays"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:singleSelection="false"
-        app:chipSpacingHorizontal="4dp"
-        android:layout_marginBottom="20dp">
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipSenin"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Sen"
-            android:textSize="12sp"
-            app:chipBackgroundColor="#E8F5E9"
-            app:chipStrokeColor="#4CAF50"
-            app:chipStrokeWidth="1dp"
-            app:checkedIconEnabled="true" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipSelasa"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Sel"
-            android:textSize="12sp"
-            app:chipBackgroundColor="#E8F5E9"
-            app:chipStrokeColor="#4CAF50"
-            app:chipStrokeWidth="1dp"
-            app:checkedIconEnabled="true" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipRabu"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Rab"
-            android:textSize="12sp"
-            app:chipBackgroundColor="#E8F5E9"
-            app:chipStrokeColor="#4CAF50"
-            app:chipStrokeWidth="1dp"
-            app:checkedIconEnabled="true" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipKamis"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Kam"
-            android:textSize="12sp"
-            app:chipBackgroundColor="#E8F5E9"
-            app:chipStrokeColor="#4CAF50"
-            app:chipStrokeWidth="1dp"
-            app:checkedIconEnabled="true" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipJumat"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Jum"
-            android:textSize="12sp"
-            app:chipBackgroundColor="#E8F5E9"
-            app:chipStrokeColor="#4CAF50"
-            app:chipStrokeWidth="1dp"
-            app:checkedIconEnabled="true" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipSabtu"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Sab"
-            android:textSize="12sp"
-            app:chipBackgroundColor="#E8F5E9"
-            app:chipStrokeColor="#4CAF50"
-            app:chipStrokeWidth="1dp"
-            app:checkedIconEnabled="true" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipMinggu"
-            style="@style/Widget.MaterialComponents.Chip.Filter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Min"
-            android:textSize="12sp"
-            app:chipBackgroundColor="#E8F5E9"
-            app:chipStrokeColor="#4CAF50"
-            app:chipStrokeWidth="1dp"
-            app:checkedIconEnabled="true" />
-
-    </com.google.android.material.chip.ChipGroup>
-
-    <!-- Divider -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#E0E0E0"
-        android:layout_marginBottom="16dp" />
-
-    <!-- ======= Section: Rentang Waktu ======= -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="🕐 Rentang Waktu Menyala"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:textColor="#424242"
-        android:layout_marginBottom="12dp" />
-
-    <!-- Time Pickers Row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center">
+        android:orientation="vertical"
+        android:padding="24dp">
 
-        <!-- Jam Mulai -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Jam Mulai"
-                android:textSize="12sp"
-                android:textColor="#757575"
-                android:layout_marginBottom="6dp" />
-
-            <TimePicker
-                android:id="@+id/timePickerStart"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:timePickerMode="spinner"
-                android:scaleX="0.85"
-                android:scaleY="0.85" />
-        </LinearLayout>
-
-        <!-- Arrow Separator -->
+        <!-- Title -->
         <TextView
+            android:id="@+id/tvDialogTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="-"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="#1B5E20"
-            android:layout_gravity="center" />
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="4dp"
+            android:text="Atur Jadwal"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
-        <!-- Jam Selesai -->
-        <LinearLayout
-            android:layout_width="0dp"
+        <!-- Subtitle -->
+        <TextView
+            android:id="@+id/tvDialogSubtitle"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center">
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="20dp"
+            android:text="Pompa akan otomatis menyala"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
 
-            <TextView
+        <!-- ======= Section: Pilih Hari ======= -->
+        <TextView
+            style="@style/SmartFarm.SectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:text="PILIH HARI" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupDays"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            app:chipSpacingHorizontal="4dp"
+            app:singleSelection="false">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSenin"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Jam Selesai"
-                android:textSize="12sp"
-                android:textColor="#757575"
-                android:layout_marginBottom="6dp" />
+                android:text="Sen"
+                app:chipBackgroundColor="#E8F5E9"
+                app:chipStrokeColor="@color/primary_variant"
+                app:chipStrokeWidth="1dp" />
 
-            <TimePicker
-                android:id="@+id/timePickerEnd"
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSelasa"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:timePickerMode="spinner"
-                android:scaleX="0.85"
-                android:scaleY="0.85" />
+                android:text="Sel"
+                app:chipBackgroundColor="#E8F5E9"
+                app:chipStrokeColor="@color/primary_variant"
+                app:chipStrokeWidth="1dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipRabu"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Rab"
+                app:chipBackgroundColor="#E8F5E9"
+                app:chipStrokeColor="@color/primary_variant"
+                app:chipStrokeWidth="1dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipKamis"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Kam"
+                app:chipBackgroundColor="#E8F5E9"
+                app:chipStrokeColor="@color/primary_variant"
+                app:chipStrokeWidth="1dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipJumat"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Jum"
+                app:chipBackgroundColor="#E8F5E9"
+                app:chipStrokeColor="@color/primary_variant"
+                app:chipStrokeWidth="1dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSabtu"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sab"
+                app:chipBackgroundColor="#E8F5E9"
+                app:chipStrokeColor="@color/primary_variant"
+                app:chipStrokeWidth="1dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipMinggu"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Min"
+                app:chipBackgroundColor="#E8F5E9"
+                app:chipStrokeColor="@color/primary_variant"
+                app:chipStrokeWidth="1dp" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginBottom="20dp"
+            android:background="@color/divider" />
+
+        <!-- ======= Section: Rentang Waktu ======= -->
+        <TextView
+            style="@style/SmartFarm.SectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:text="RENTANG WAKTU" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <!-- Jam Mulai -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:text="JAM MULAI"
+                    android:textColor="@color/primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+                <TimePicker
+                    android:id="@+id/timePickerStart"
+                    android:layout_width="wrap_content"
+                    android:layout_height="120dp"
+                    android:timePickerMode="spinner" />
+            </LinearLayout>
+
+            <!-- Jam Selesai -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="80dp"
+                    android:layout_height="wrap_content"
+                    android:text="JAM SELESAI"
+                    android:textColor="@color/primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+                <TimePicker
+                    android:id="@+id/timePickerEnd"
+                    android:layout_width="wrap_content"
+                    android:layout_height="120dp"
+                    android:timePickerMode="spinner" />
+            </LinearLayout>
         </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:lineSpacingExtra="2dp"
+            android:text="💡 Valve akan menyala secara otomatis sesuai rentang waktu di atas pada hari yang dipilih."
+            android:textColor="@color/text_hint"
+            android:textSize="12sp" />
+
     </LinearLayout>
-
-    <!-- Info text -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="💡 Valve akan menyala dari jam mulai hingga jam selesai. Pompa otomatis menyala saat valve aktif."
-        android:textSize="12sp"
-        android:textColor="#9E9E9E"
-        android:layout_marginTop="12dp"
-        android:gravity="center"
-        android:lineSpacingExtra="2dp" />
-
-</LinearLayout>
+</androidx.core.widget.NestedScrollView>

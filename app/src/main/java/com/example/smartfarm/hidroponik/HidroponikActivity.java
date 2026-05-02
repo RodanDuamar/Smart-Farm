@@ -4,7 +4,7 @@ import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.view.View;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -19,7 +19,7 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
     private TextView tvTdsRealtime, tvPhRealtime, tvModeStatus;
     private TextView btnPompaA, btnPompaB, btnPompaAir, btnUpdateParameter;
     private EditText etPpmTarget, etPpmTargetMax;
-    private LinearLayout layoutManualControl, layoutParameter;
+    private View layoutManualControl, layoutParameter;
     @SuppressLint("UseSwitchCompatOrMaterialCode")
     private Switch switchAuto;
 
@@ -149,9 +149,8 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
 
     private void updateButtonStyle(TextView view, boolean isOn) {
         view.setBackgroundResource(isOn
-                ? R.drawable.bg_neumorph_card_pressed
-                : R.drawable.bg_neumorph_card);
-        view.setAlpha(isOn ? 0.7f : 1.0f);
+                ? R.drawable.bg_pump_button_active
+                : R.drawable.bg_pump_button);
     }
 
     private void resetPumpStates() {

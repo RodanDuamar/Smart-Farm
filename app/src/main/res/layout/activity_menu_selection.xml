@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F9F5"
+    android:background="@color/surface"
+    android:fillViewport="true"
     tools:context=".menu.MenuSelectionActivity">
 
     <LinearLayout
@@ -19,48 +20,40 @@
             android:orientation="vertical"
             android:gravity="center_horizontal"
             android:background="@drawable/bg_header_gradient"
-            android:paddingTop="60dp"
-            android:paddingBottom="40dp">
+            android:paddingTop="56dp"
+            android:paddingBottom="44dp">
 
             <!-- App Logo Icon -->
-
-            <!-- Title -->
             <com.google.android.material.imageview.ShapeableImageView
-                android:layout_width="100dp"
-                android:layout_height="100dp"
+                android:layout_width="88dp"
+                android:layout_height="88dp"
                 android:contentDescription="App Logo"
                 android:padding="2dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/logo_petani_millenial_sleman"
-                app:shapeAppearanceOverlay="@style/CircleImageStyle" />
+                app:shapeAppearanceOverlay="@style/CircleImageStyle"
+                app:strokeColor="#40FFFFFF"
+                app:strokeWidth="2dp" />
 
+            <!-- Title -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Petani Millenial Sleman"
-                android:textSize="28sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
-                android:textColor="#1B5E20"
+                android:textColor="#FFFFFF"
                 android:layout_marginTop="16dp" />
 
             <!-- Subtitle -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Smart Farm"
-                android:textStyle="bold"
-                android:textSize="14sp"
-                android:textColor="#1B5E20"
-                android:layout_marginTop="4dp" />
-
-            <!-- Description -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Pilih jenis pertanian yang ingin Anda monitor"
+                android:text="Smart Farm Monitoring System"
                 android:textSize="13sp"
-                android:textColor="#9E9E9E"
-                android:layout_marginTop="8dp" />
+                android:textColor="#B9F6CA"
+                android:letterSpacing="0.05"
+                android:layout_marginTop="4dp" />
         </LinearLayout>
 
         <!-- ==================== MENU CARDS SECTION ==================== -->
@@ -68,16 +61,16 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingHorizontal="20dp"
+            android:paddingTop="24dp"
+            android:paddingBottom="16dp">
 
             <!-- Section Title -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Pilih Menu"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="#1B1F1B"
+                android:text="PILIH MODUL"
+                style="@style/SmartFarm.SectionTitle"
                 android:layout_marginBottom="16dp" />
 
             <!-- ============ CARD: Menu Hidroponik ============ -->
@@ -86,12 +79,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="20dp"
-                app:cardElevation="4dp"
-                android:layout_marginBottom="16dp"
+                app:cardElevation="2dp"
+                android:layout_marginBottom="14dp"
                 app:cardBackgroundColor="@android:color/transparent"
                 android:clickable="true"
                 android:focusable="true"
-                app:rippleColor="#1A0288D1">
+                app:rippleColor="#200288D1">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -99,17 +92,17 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:background="@drawable/bg_card_hidroponik"
-                    android:padding="24dp">
+                    android:padding="22dp">
 
                     <!-- Icon Container -->
                     <FrameLayout
-                        android:layout_width="64dp"
-                        android:layout_height="64dp"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
                         android:background="@drawable/bg_icon_circle_blue">
 
                         <ImageView
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_hydroponics"
                             android:contentDescription="Hidroponik Icon" />
@@ -127,16 +120,17 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Hidroponik"
-                            android:textSize="20sp"
+                            android:textSize="18sp"
                             android:textStyle="bold"
-                            android:textColor="#00695C" />
+                            android:textColor="@color/secondary_variant" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Monitor dan kontrol sistem hidroponik berbasis nutrisi air"
-                            android:textSize="13sp"
-                            android:textColor="#546E7A"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_secondary"
+                            android:lineSpacingExtra="2dp"
                             android:layout_marginTop="4dp" />
 
                         <!-- Status Badge -->
@@ -145,30 +139,27 @@
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
                             android:gravity="center_vertical"
+                            android:background="@drawable/bg_chip_status"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="3dp"
                             android:layout_marginTop="8dp">
 
                             <View
-                                android:layout_width="8dp"
-                                android:layout_height="8dp"
+                                android:layout_width="6dp"
+                                android:layout_height="6dp"
                                 android:background="@drawable/bg_icon_circle_blue" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Water Based"
-                                android:textSize="11sp"
+                                android:textSize="10sp"
                                 android:textColor="#0288D1"
+                                android:textStyle="bold"
                                 android:layout_marginStart="6dp" />
                         </LinearLayout>
                     </LinearLayout>
 
-                    <!-- Arrow -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="›"
-                        android:textSize="32sp"
-                        android:textColor="#0288D1" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -178,12 +169,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="20dp"
-                app:cardElevation="4dp"
-                android:layout_marginBottom="16dp"
+                app:cardElevation="2dp"
+                android:layout_marginBottom="14dp"
                 app:cardBackgroundColor="@android:color/transparent"
                 android:clickable="true"
                 android:focusable="true"
-                app:rippleColor="#1A2E7D32">
+                app:rippleColor="#202E7D32">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -191,17 +182,17 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:background="@drawable/bg_card_mediatanah"
-                    android:padding="24dp">
+                    android:padding="22dp">
 
                     <!-- Icon Container -->
                     <FrameLayout
-                        android:layout_width="64dp"
-                        android:layout_height="64dp"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
                         android:background="@drawable/bg_icon_circle_green">
 
                         <ImageView
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_soil"
                             android:contentDescription="Media Tanah Icon" />
@@ -219,16 +210,17 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Media Tanah"
-                            android:textSize="20sp"
+                            android:textSize="18sp"
                             android:textStyle="bold"
-                            android:textColor="#2E7D32" />
+                            android:textColor="@color/primary_variant" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Monitor kelembapan, pH tanah dan kontrol valve irigasi"
-                            android:textSize="13sp"
-                            android:textColor="#5D4037"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_secondary"
+                            android:lineSpacingExtra="2dp"
                             android:layout_marginTop="4dp" />
 
                         <!-- Status Badge -->
@@ -237,30 +229,27 @@
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
                             android:gravity="center_vertical"
+                            android:background="@drawable/bg_chip_status"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="3dp"
                             android:layout_marginTop="8dp">
 
                             <View
-                                android:layout_width="8dp"
-                                android:layout_height="8dp"
+                                android:layout_width="6dp"
+                                android:layout_height="6dp"
                                 android:background="@drawable/bg_icon_circle_green" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Soil Based"
-                                android:textSize="11sp"
-                                android:textColor="#388E3C"
+                                android:textSize="10sp"
+                                android:textColor="@color/primary_variant"
+                                android:textStyle="bold"
                                 android:layout_marginStart="6dp" />
                         </LinearLayout>
                     </LinearLayout>
 
-                    <!-- Arrow -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="›"
-                        android:textSize="32sp"
-                        android:textColor="#2E7D32" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -270,7 +259,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="16dp"
                 android:padding="12dp">
 
                 <View
@@ -281,9 +270,9 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Powered by Ardana Garden"
-                    android:textSize="12sp"
-                    android:textColor="#9E9E9E"
+                    android:text="By Ardana Garden"
+                    android:textSize="11sp"
+                    android:textColor="@color/text_hint"
                     android:layout_marginStart="8dp" />
             </LinearLayout>
 
