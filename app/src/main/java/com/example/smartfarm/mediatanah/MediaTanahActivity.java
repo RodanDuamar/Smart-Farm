@@ -666,6 +666,20 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         }
     }
 
+    @Override
+    public void onPowerSourceChanged(String source) {
+        // Update switch sumber daya tanpa trigger listener
+        suppressSwitchListener = true;
+        switchSumberDaya.setChecked("AKI".equalsIgnoreCase(source));
+        suppressSwitchListener = false;
+    }
+
+    @Override
+    public void onModeChanged(String mode) {
+        // Bisa digunakan untuk menampilkan indicator mode AUTO/MANUAL jika diperlukan
+        Log.d(TAG, "Mode MCU: " + mode);
+    }
+
     // ==================== UI HELPER METHODS ====================
 
     /**

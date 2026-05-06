@@ -70,11 +70,21 @@ public abstract class BaseSmartFarmActivity extends AppCompatActivity {
                 }
             }
 
-            // Set callback SEBELUM connect
-            mqttClient.setCallback(new MqttCallback() {
+            // Gunakan MqttCallbackExtended agar connectComplete dipanggil
+            // BAIK saat connect pertama MAUPUN saat auto-reconnect
+            mqttClient.setCallback(new org.eclipse.paho.client.mqttv3.MqttCallbackExtended() {
+                @Override
+                public void connectComplete(boolean reconnect, String serverURI) {
+                    Log.d(TAG, (reconnect ? "Reconnected" : "Connected") + " to " + serverURI);
+                    // Re-subscribe setiap kali connect/reconnect
+                    subscribeToTopics();
+                    runOnUiThread(() -> onMqttConnected());
+                }
+
                 @Override
                 public void connectionLost(Throwable cause) {
-                    Log.w(TAG, "Koneksi terputus: " + cause.getMessage());
+                    Log.w(TAG, "Koneksi terputus: " +
+                            (cause != null ? cause.getMessage() : "unknown"));
                 }
 
                 @Override
@@ -93,10 +103,8 @@ public abstract class BaseSmartFarmActivity extends AppCompatActivity {
             mqttClient.connect(options, null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
-                    Log.d(TAG, "MQTT Connected to " + getBrokerUrl());
-                    // Subscribe setelah connect berhasil
-                    subscribeToTopics();
-                    runOnUiThread(() -> onMqttConnected());
+                    // connectComplete callback akan handle subscribe & onMqttConnected
+                    Log.d(TAG, "MQTT connect initiated successfully");
                 }
 
                 @Override
