@@ -3,30 +3,34 @@ package com.example.smartfarm.hidroponik;
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.widget.SwitchCompat;
+
 import com.example.smartfarm.R;
 import com.example.smartfarm.base.BaseSmartFarmActivity;
+
 import org.json.JSONObject;
 
 import java.util.Locale;
 
 public class HidroponikActivity extends BaseSmartFarmActivity {
 
-    private TextView tvTdsRealtime, tvPhRealtime, tvModeStatus;
-    private TextView btnPompaA, btnPompaB, btnPompaAir, btnUpdateParameter;
+    // --- DEKLARASI VARIABEL ---
+    private TextView tvTdsRealtime, tvPhRealtime, tvModeStatus, tvStatusTds, tvStatusPh;
+    private TextView tvTdsMin, tvTdsMax;
+    private ProgressBar progressTds, progressPh;
+    private SwitchCompat switchPompaA, switchPompaB, switchPompaAir;
     private EditText etPpmTarget, etPpmTargetMax;
-    private LinearLayout layoutManualControl, layoutParameter;
+    private View btnUpdateParameter, cardKontrolPompa;
+
     @SuppressLint("UseSwitchCompatOrMaterialCode")
     private Switch switchAuto;
-
-    // State pompa lokal (untuk kontrol manual)
-    private boolean isPompaAOn   = false;
-    private boolean isPompaBOn   = false;
-    private boolean isPompaAirOn = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,97 +42,87 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
         setupControlListeners();
     }
 
+    // --- SINKRONISASI SAAT APLIKASI DIBUKA ---
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Memicu sinkronisasi ulang saat aplikasi dibuka kembali
+        requestStatusUpdate();
+    }
+
+    private void requestStatusUpdate() {
+        try {
+            // Mengirim perintah khusus agar alat mengirimkan SEMUA status termasuk min/max
+            publishMQTT("nutrisi/request", "get_all_status");
+            Log.d("MQTT_SYNC", "Meminta data parameter dan status ke hardware...");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private void initViews() {
         tvTdsRealtime      = findViewById(R.id.tvTdsRealtime);
         tvPhRealtime       = findViewById(R.id.tvPhRealtime);
         tvModeStatus       = findViewById(R.id.tvModeStatus);
-        btnPompaA          = findViewById(R.id.btnPompaA);
-        btnPompaB          = findViewById(R.id.btnPompaB);
-        btnPompaAir        = findViewById(R.id.btnPompaAir);
-        btnUpdateParameter = findViewById(R.id.btnUpdateParameter);
+        tvStatusTds        = findViewById(R.id.tvStatusTds);
+        tvStatusPh         = findViewById(R.id.tvStatusPh);
+        tvTdsMin           = findViewById(R.id.tvTdsMin);
+        tvTdsMax           = findViewById(R.id.tvTdsMax);
+        progressTds        = findViewById(R.id.progressTds);
+        progressPh         = findViewById(R.id.progressPh);
+        cardKontrolPompa   = findViewById(R.id.cardKontrolPompa);
+        switchPompaA       = findViewById(R.id.switchPompaA);
+        switchPompaB       = findViewById(R.id.switchPompaB);
+        switchPompaAir     = findViewById(R.id.switchPompaAir);
         etPpmTarget        = findViewById(R.id.etPpmTarget);
         etPpmTargetMax     = findViewById(R.id.etPpmTargetMax);
-        layoutManualControl = findViewById(R.id.layoutManualControl);
-        layoutParameter    = findViewById(R.id.layoutParameter);
+        btnUpdateParameter = findViewById(R.id.btnUpdateParameter);
         switchAuto         = findViewById(R.id.switchAuto);
     }
 
     private void setupControlListeners() {
-
-        // ── Switch Auto/Manual ─────────────────────────────────────
-        // ESP32 membaca key "manual":
-        //   {"manual": false} -> mode OTOMATIS
-        //   {"manual": true}  -> mode MANUAL
-        // Switch ON (isChecked=true) = OTOMATIS -> kirim {"manual": false}
-        // Switch OFF (isChecked=false) = MANUAL  -> kirim {"manual": true}
         switchAuto.setOnCheckedChangeListener((v, isChecked) -> {
-            updateUIState(isChecked);
-            try {
-                JSONObject json = new JSONObject();
-                json.put("manual", !isChecked); // isChecked=true(auto) -> manual=false
-                publishMQTT("nutrisi/control", json.toString());
-
-                if (isChecked) {
-                    // Pindah ke auto -> reset visual tombol pompa
-                    resetPumpStates();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (v.isPressed()) {
+                updateUIState(isChecked);
+                publishCommand("manual", !isChecked);
             }
         });
 
-        // ── Update Parameter PPM ───────────────────────────────────
-        btnUpdateParameter.setOnClickListener(v -> {
-            String minStr = etPpmTarget.getText().toString();
-            String maxStr = etPpmTargetMax.getText().toString();
+        switchPompaA.setOnClickListener(v -> publishCommand("dosing1", switchPompaA.isChecked()));
+        switchPompaB.setOnClickListener(v -> publishCommand("dosing2", switchPompaB.isChecked()));
+        switchPompaAir.setOnClickListener(v -> publishCommand("water_pump", switchPompaAir.isChecked()));
 
-            if (minStr.isEmpty() || maxStr.isEmpty()) {
-                Toast.makeText(this, "Input tidak boleh kosong", Toast.LENGTH_SHORT).show();
+        btnUpdateParameter.setOnClickListener(v -> {
+            String min = etPpmTarget.getText().toString();
+            String max = etPpmTargetMax.getText().toString();
+
+            if (min.isEmpty() || max.isEmpty()) {
+                Toast.makeText(this, "Isi semua parameter!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             try {
-                int min = Integer.parseInt(minStr);
-                int max = Integer.parseInt(maxStr);
-
-                if (min >= max) {
-                    Toast.makeText(this, "PPM min harus lebih kecil dari max", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+                int valMin = Integer.parseInt(min);
+                int valMax = Integer.parseInt(max);
 
                 JSONObject json = new JSONObject();
-                json.put("min", min);
-                json.put("max", max);
+                json.put("min", valMin);
+                json.put("max", valMax);
+
+                // Publish ke topik set agar alat menyimpan nilai baru
                 publishMQTT("nutrisi/set/ppm", json.toString());
-                Toast.makeText(this, "Parameter Terkirim!", Toast.LENGTH_SHORT).show();
+
+                tvTdsMin.setText(min);
+                tvTdsMax.setText(max);
+
+                Toast.makeText(this, "Parameter Nutrisi Diperbarui!", Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
-                Toast.makeText(this, "Gagal mengirim: Input harus angka", Toast.LENGTH_SHORT).show();
+                Log.e("UI_ERROR", "Error update parameter: " + e.getMessage());
             }
-        });
-
-        // ── Tombol Pompa (Toggle) ──────────────────────────────────
-        btnPompaA.setOnClickListener(v -> {
-            isPompaAOn = !isPompaAOn;
-            updateButtonStyle(btnPompaA, isPompaAOn);
-            sendManualCmd("dosing1", isPompaAOn);
-        });
-
-        btnPompaB.setOnClickListener(v -> {
-            isPompaBOn = !isPompaBOn;
-            updateButtonStyle(btnPompaB, isPompaBOn);
-            sendManualCmd("dosing2", isPompaBOn);
-        });
-
-        btnPompaAir.setOnClickListener(v -> {
-            isPompaAirOn = !isPompaAirOn;
-            updateButtonStyle(btnPompaAir, isPompaAirOn);
-            sendManualCmd("water_pump", isPompaAirOn);
         });
     }
 
-    // ── Kirim perintah manual pompa ────────────────────────────────
-    // ESP32 akan otomatis set manualMode=true saat menerima perintah pompa
-    private void sendManualCmd(String key, boolean state) {
+    private void publishCommand(String key, boolean state) {
         try {
             JSONObject json = new JSONObject();
             json.put(key, state);
@@ -138,92 +132,16 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
         }
     }
 
-    // ── Update tampilan UI sesuai mode ─────────────────────────────
     private void updateUIState(boolean isAuto) {
-        tvModeStatus.setText(isAuto ? "OTOMATIS" : "MANUAL");
-        layoutManualControl.setAlpha(isAuto ? 0.4f : 1.0f);
-        btnPompaA.setEnabled(!isAuto);
-        btnPompaB.setEnabled(!isAuto);
-        btnPompaAir.setEnabled(!isAuto);
-    }
-
-    private void updateButtonStyle(TextView view, boolean isOn) {
-        view.setBackgroundResource(isOn
-                ? R.drawable.bg_neumorph_card_pressed
-                : R.drawable.bg_neumorph_card);
-        view.setAlpha(isOn ? 0.7f : 1.0f);
-    }
-
-    private void resetPumpStates() {
-        isPompaAOn = false; isPompaBOn = false; isPompaAirOn = false;
-        updateButtonStyle(btnPompaA,   false);
-        updateButtonStyle(btnPompaB,   false);
-        updateButtonStyle(btnPompaAir, false);
-    }
-
-    // ── Terima data dari MQTT ──────────────────────────────────────
-    @Override
-    protected void onMqttMessageReceived(String topic, String payload) {
-        try {
-            JSONObject json = new JSONObject(payload);
-
-            // 1. Data sensor real-time dari ESP32
-            if (topic.equals("nutrisi/sensor")) {
-                double phValue  = json.optDouble("ph", 0.0);
-                int    ppmValue = json.optInt("ppm", 0);
-
-                runOnUiThread(() -> {
-                    tvPhRealtime.setText(String.format(Locale.getDefault(), "%.2f", phValue));
-                    tvTdsRealtime.setText(String.valueOf(ppmValue));
-
-                    // Sinkronisasi visual tombol pompa dengan status aktual ESP32
-                    if (json.has("dosing1")) {
-                        isPompaAOn = json.optBoolean("dosing1");
-                        updateButtonStyle(btnPompaA, isPompaAOn);
-                    }
-                    if (json.has("dosing2")) {
-                        isPompaBOn = json.optBoolean("dosing2");
-                        updateButtonStyle(btnPompaB, isPompaBOn);
-                    }
-                    if (json.has("water_pump")) {
-                        isPompaAirOn = json.optBoolean("water_pump");
-                        updateButtonStyle(btnPompaAir, isPompaAirOn);
-                    }
-
-                    // Sinkronisasi setpoint yang tersimpan di ESP32
-                    if (json.has("ppm_min"))
-                        etPpmTarget.setText(String.valueOf(json.optInt("ppm_min")));
-                    if (json.has("ppm_max"))
-                        etPpmTargetMax.setText(String.valueOf(json.optInt("ppm_max")));
-                });
+        runOnUiThread(() -> {
+            tvModeStatus.setText(isAuto ? "OTOMATIS" : "MANUAL");
+            if (cardKontrolPompa != null) {
+                cardKontrolPompa.setAlpha(isAuto ? 0.5f : 1.0f);
             }
-
-            // 2. Status pompa dari ESP32 (topic nutrisi/status)
-            else if (topic.equals("nutrisi/status")) {
-                runOnUiThread(() -> {
-                    if (json.has("dosing1")) {
-                        isPompaAOn = json.optBoolean("dosing1");
-                        updateButtonStyle(btnPompaA, isPompaAOn);
-                    }
-                    if (json.has("dosing2")) {
-                        isPompaBOn = json.optBoolean("dosing2");
-                        updateButtonStyle(btnPompaB, isPompaBOn);
-                    }
-                    if (json.has("water_pump")) {
-                        isPompaAirOn = json.optBoolean("water_pump");
-                        updateButtonStyle(btnPompaAir, isPompaAirOn);
-                    }
-                });
-            }
-
-        } catch (Exception e) {
-            Log.e("MQTT_ERROR", "Gagal parse JSON: " + e.getMessage());
-        }
-    }
-
-    @Override
-    protected String[] getSubscriptionTopics() {
-        return new String[]{"nutrisi/sensor", "nutrisi/status"};
+            switchPompaA.setEnabled(!isAuto);
+            switchPompaB.setEnabled(!isAuto);
+            switchPompaAir.setEnabled(!isAuto);
+        });
     }
 
     @Override
@@ -233,6 +151,66 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
 
     @Override
     protected String getClientId() {
-        return "Android_Hidroponik_" + System.currentTimeMillis();
+        return "Android_Hidroponik_Sleman_" + System.currentTimeMillis();
+    }
+
+    @Override
+    protected String[] getSubscriptionTopics() {
+        return new String[]{"nutrisi/sensor", "nutrisi/status"};
+    }
+
+    @Override
+    protected void onMqttMessageReceived(String topic, String payload) {
+        runOnUiThread(() -> {
+            try {
+                JSONObject json = new JSONObject(payload);
+
+                // 1. SINKRONISASI NILAI MIN/MAX (Parameter Alat)
+                if (json.has("min")) {
+                    String minVal = String.valueOf(json.optInt("min"));
+                    tvTdsMin.setText(minVal);
+                    // Update input jika user sedang tidak fokus mengetik
+                    if (!etPpmTarget.isFocused()) {
+                        etPpmTarget.setText(minVal);
+                    }
+                }
+                if (json.has("max")) {
+                    String maxVal = String.valueOf(json.optInt("max"));
+                    tvTdsMax.setText(maxVal);
+                    if (!etPpmTargetMax.isFocused()) {
+                        etPpmTargetMax.setText(maxVal);
+                    }
+                }
+
+                // 2. Handling Data Sensor
+                if (json.has("ppm")) {
+                    int ppm = json.optInt("ppm");
+                    tvTdsRealtime.setText(String.valueOf(ppm));
+                    progressTds.setProgress(ppm);
+                    tvStatusTds.setText(ppm < 800 ? "RENDAH" : (ppm <= 1200 ? "NORMAL" : "TINGGI"));
+                }
+
+                if (json.has("ph")) {
+                    double ph = json.optDouble("ph");
+                    tvPhRealtime.setText(String.format(Locale.getDefault(), "%.1f", ph));
+                    progressPh.setProgress((int) (ph * 10));
+                    tvStatusPh.setText((ph >= 5.5 && ph <= 6.5) ? "IDEAL" : "TIDAK STABIL");
+                }
+
+                // 3. Sinkronisasi Status Saklar & Mode
+                if (json.has("manual")) {
+                    boolean isManual = json.optBoolean("manual");
+                    switchAuto.setChecked(!isManual);
+                    updateUIState(!isManual);
+                }
+
+                if (json.has("dosing1")) switchPompaA.setChecked(json.optBoolean("dosing1"));
+                if (json.has("dosing2")) switchPompaB.setChecked(json.optBoolean("dosing2"));
+                if (json.has("water_pump")) switchPompaAir.setChecked(json.optBoolean("water_pump"));
+
+            } catch (Exception e) {
+                Log.e("MQTT_PARSE", "Gagal sinkronisasi: " + e.getMessage());
+            }
+        });
     }
 }
