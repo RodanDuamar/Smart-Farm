@@ -1,12 +1,47 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.SmartFarm" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <!-- Primary color scheme -->
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="android:statusBarColor">@color/primary_dark</item>
+        <item name="android:navigationBarColor">@color/surface</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+        <!-- MaterialSwitch styling -->
+        <item name="materialSwitchStyle">@style/SmartFarm.Switch</item>
     </style>
 
+    <!-- Theme alias to fix "resource style/SmartFarm not found" -->
+    <style name="SmartFarm" parent="Base.Theme.SmartFarm" />
     <style name="Theme.SmartFarm" parent="Base.Theme.SmartFarm" />
+
     <style name="CircleImageStyle">
         <item name="cornerSize">50%</item>
+    </style>
+
+    <!-- Unified MaterialSwitch style -->
+    <style name="SmartFarm.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="thumbTint">@color/white</item>
+        <item name="trackTint">@color/switch_track_selector</item>
+    </style>
+
+    <!-- Section title style -->
+    <style name="SmartFarm.SectionTitle" parent="">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <!-- Card title style -->
+    <style name="SmartFarm.CardTitle" parent="">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/text_primary</item>
     </style>
 </resources>

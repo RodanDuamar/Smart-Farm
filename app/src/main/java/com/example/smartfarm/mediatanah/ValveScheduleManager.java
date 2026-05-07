@@ -96,6 +96,12 @@ public class ValveScheduleManager {
 
         /** Dipanggil saat daftar jadwal berubah (dari MCU atau lokal) */
         void onScheduleListChanged(int valveIndex);
+
+        /** Dipanggil saat mode MCU berubah (AUTO/MANUAL) */
+        default void onModeChanged(String mode) {}
+
+        /** Dipanggil saat sumber daya berubah (PLN/AKI) */
+        default void onPowerSourceChanged(String source) {}
     }
 
     // ==================== CONSTRUCTOR ====================
@@ -305,7 +311,9 @@ public class ValveScheduleManager {
      *   "valve_1": "ON",
      *   "valve_2": "OFF",
      *   "valve_3": "OFF",
-     *   "valve_4": "OFF"
+     *   "valve_4": "OFF",
+     *   "mode": "AUTO",
+     *   "power": "PLN"
      * }
      */
     private void handleValveStatus(String payload) {
@@ -330,6 +338,18 @@ public class ValveScheduleManager {
                     valveStates.put(i, newState);
                     callback.onValveStateChanged(i, newState);
                 }
+            }
+
+            // Update mode (AUTO/MANUAL)
+            String mode = json.optString("mode", "");
+            if (!mode.isEmpty()) {
+                callback.onModeChanged(mode);
+            }
+
+            // Update sumber daya (PLN/AKI)
+            String power = json.optString("power", "");
+            if (!power.isEmpty()) {
+                callback.onPowerSourceChanged(power);
             }
 
             Log.d(TAG, "Valve status updated from MCU: " + payload);

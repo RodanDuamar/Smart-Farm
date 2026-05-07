@@ -13,9 +13,9 @@
         android:text="Atur Durasi"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="#1B5E20"
+        android:textColor="@color/text_primary"
         android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginBottom="4dp" />
 
     <!-- Subtitle -->
     <TextView
@@ -24,7 +24,7 @@
         android:layout_height="wrap_content"
         android:text="Pompa akan otomatis menyala"
         android:textSize="13sp"
-        android:textColor="#757575"
+        android:textColor="@color/text_secondary"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="24dp" />
 
@@ -47,7 +47,8 @@
                 android:layout_height="wrap_content"
                 android:text="Menit"
                 android:textSize="12sp"
-                android:textColor="#757575"
+                android:textColor="@color/text_secondary"
+                android:textStyle="bold"
                 android:layout_marginBottom="4dp" />
 
             <NumberPicker
@@ -64,7 +65,7 @@
             android:text=" : "
             android:textSize="28sp"
             android:textStyle="bold"
-            android:textColor="#1B5E20"
+            android:textColor="@color/primary"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp" />
 
@@ -80,7 +81,8 @@
                 android:layout_height="wrap_content"
                 android:text="Detik"
                 android:textSize="12sp"
-                android:textColor="#757575"
+                android:textColor="@color/text_secondary"
+                android:textStyle="bold"
                 android:layout_marginBottom="4dp" />
 
             <NumberPicker
@@ -97,7 +99,7 @@
         android:layout_height="wrap_content"
         android:text="💡 Pompa akan otomatis menyala selama valve aktif dan mati setelah semua valve selesai."
         android:textSize="12sp"
-        android:textColor="#9E9E9E"
+        android:textColor="@color/text_hint"
         android:layout_marginTop="16dp"
         android:gravity="center"
         android:lineSpacingExtra="2dp" />

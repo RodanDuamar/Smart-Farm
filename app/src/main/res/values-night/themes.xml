@@ -2,6 +2,9 @@
     <!-- Base application theme. -->
     <style name="Base.Theme.SmartFarm" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
     </style>
+
+    <!-- Theme alias to fix "resource style/SmartFarm not found" -->
+    <style name="SmartFarm" parent="Base.Theme.SmartFarm" />
+    <style name="Theme.SmartFarm" parent="Base.Theme.SmartFarm" />
 </resources>
