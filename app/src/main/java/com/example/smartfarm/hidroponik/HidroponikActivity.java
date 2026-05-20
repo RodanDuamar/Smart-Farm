@@ -10,11 +10,19 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.example.smartfarm.R;
 import com.example.smartfarm.base.BaseSmartFarmActivity;
+import com.example.smartfarm.device.DeviceListActivity;
 import org.json.JSONObject;
 
 import java.util.Locale;
 
 public class HidroponikActivity extends BaseSmartFarmActivity {
+
+    // Konfigurasi device dari Intent extras (dinamis per device)
+    private String deviceBrokerUrl;
+    private String deviceMqttUsername;
+    private String deviceMqttPassword;
+    private String deviceTopicPrefix;
+    private String deviceName;
 
     private TextView tvTdsRealtime, tvPhRealtime, tvModeStatus;
     private TextView btnPompaA, btnPompaB, btnPompaAir, btnUpdateParameter;
@@ -33,9 +41,39 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_hidroponik);
 
+        // Baca konfigurasi device dari Intent
+        loadDeviceConfig();
+
         initViews();
         setupMQTT();
         setupControlListeners();
+    }
+
+    /**
+     * Baca konfigurasi MQTT dari Intent extras.
+     * Jika tidak ada (legacy), gunakan default hardcoded.
+     */
+    private void loadDeviceConfig() {
+        deviceName = getIntent().getStringExtra(DeviceListActivity.EXTRA_DEVICE_NAME);
+        deviceBrokerUrl = getIntent().getStringExtra(DeviceListActivity.EXTRA_BROKER_URL);
+        deviceMqttUsername = getIntent().getStringExtra(DeviceListActivity.EXTRA_MQTT_USERNAME);
+        deviceMqttPassword = getIntent().getStringExtra(DeviceListActivity.EXTRA_MQTT_PASSWORD);
+        deviceTopicPrefix = getIntent().getStringExtra(DeviceListActivity.EXTRA_TOPIC_PREFIX);
+
+        // Fallback default jika tidak ada extras (backward compatibility)
+        if (deviceBrokerUrl == null || deviceBrokerUrl.isEmpty()) {
+            deviceBrokerUrl = "tcp://broker.hivemq.com:1883";
+        }
+        if (deviceTopicPrefix == null || deviceTopicPrefix.isEmpty()) {
+            deviceTopicPrefix = "nutrisi";
+        }
+    }
+
+    /**
+     * Helper: bangun full topic dari prefix + suffix.
+     */
+    private String topic(String suffix) {
+        return deviceTopicPrefix + "/" + suffix;
     }
 
     private void initViews() {
@@ -66,7 +104,7 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
             try {
                 JSONObject json = new JSONObject();
                 json.put("manual", !isChecked); // isChecked=true(auto) -> manual=false
-                publishMQTT("nutrisi/control", json.toString());
+                publishMQTT(topic("control"), json.toString());
 
                 if (isChecked) {
                     // Pindah ke auto -> reset visual tombol pompa
@@ -99,7 +137,7 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
                 JSONObject json = new JSONObject();
                 json.put("min", min);
                 json.put("max", max);
-                publishMQTT("nutrisi/set/ppm", json.toString());
+                publishMQTT(topic("set/ppm"), json.toString());
                 Toast.makeText(this, "Parameter Terkirim!", Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
                 Toast.makeText(this, "Gagal mengirim: Input harus angka", Toast.LENGTH_SHORT).show();
@@ -132,7 +170,7 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
         try {
             JSONObject json = new JSONObject();
             json.put(key, state);
-            publishMQTT("nutrisi/control", json.toString());
+            publishMQTT(topic("control"), json.toString());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -167,7 +205,7 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
             JSONObject json = new JSONObject(payload);
 
             // 1. Data sensor real-time dari ESP32
-            if (topic.equals("nutrisi/sensor")) {
+            if (topic.equals(topic("sensor"))) {
                 double phValue  = json.optDouble("ph", 0.0);
                 int    ppmValue = json.optInt("ppm", 0);
 
@@ -198,7 +236,7 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
             }
 
             // 2. Status pompa dari ESP32 (topic nutrisi/status)
-            else if (topic.equals("nutrisi/status")) {
+            else if (topic.equals(topic("status"))) {
                 runOnUiThread(() -> {
                     if (json.has("dosing1")) {
                         isPompaAOn = json.optBoolean("dosing1");
@@ -222,12 +260,24 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
 
     @Override
     protected String[] getSubscriptionTopics() {
-        return new String[]{"nutrisi/sensor", "nutrisi/status"};
+        return new String[]{ topic("sensor"), topic("status") };
     }
 
     @Override
     protected String getBrokerUrl() {
-        return "tcp://broker.hivemq.com:1883";
+        return deviceBrokerUrl;
+    }
+
+    @Override
+    protected String getMqttUsername() {
+        return (deviceMqttUsername != null && !deviceMqttUsername.isEmpty())
+                ? deviceMqttUsername : null;
+    }
+
+    @Override
+    protected String getMqttPassword() {
+        return (deviceMqttPassword != null && !deviceMqttPassword.isEmpty())
+                ? deviceMqttPassword : null;
     }
 
     @Override

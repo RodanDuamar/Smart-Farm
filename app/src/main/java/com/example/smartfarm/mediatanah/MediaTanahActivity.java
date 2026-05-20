@@ -21,6 +21,7 @@ import androidx.core.content.ContextCompat;
 import com.example.smartfarm.R;
 import com.example.smartfarm.base.BaseSmartFarmActivity;
 import com.example.smartfarm.base.NotificationHelper;
+import com.example.smartfarm.device.DeviceListActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
@@ -60,6 +61,13 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         implements ValveScheduleManager.ScheduleCallback {
 
     private static final String TAG = "MediaTanah";
+
+    // Konfigurasi device dari Intent extras (dinamis per device)
+    private String deviceBrokerUrl;
+    private String deviceMqttUsername;
+    private String deviceMqttPassword;
+    private String deviceTopicPrefix;
+    private String deviceName;
 
     // ==================== VIEWS ====================
 
@@ -117,12 +125,15 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_media_tanah);
 
+        // Baca konfigurasi device dari Intent
+        loadDeviceConfig();
+
         // Setup notifikasi
         NotificationHelper.createNotificationChannels(this);
         requestNotificationPermission();
 
-        // Inisialisasi manager (load cache lokal)
-        scheduleManager = new ValveScheduleManager(this, this);
+        // Inisialisasi manager dengan topic prefix dinamis
+        scheduleManager = new ValveScheduleManager(this, this, deviceTopicPrefix);
 
         setupMQTT();
         initViews();
@@ -133,9 +144,36 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         refreshAllScheduleDisplays();
     }
 
+    /**
+     * Baca konfigurasi MQTT dari Intent extras.
+     * Jika tidak ada (legacy), gunakan default hardcoded.
+     */
+    private void loadDeviceConfig() {
+        deviceName = getIntent().getStringExtra(DeviceListActivity.EXTRA_DEVICE_NAME);
+        deviceBrokerUrl = getIntent().getStringExtra(DeviceListActivity.EXTRA_BROKER_URL);
+        deviceMqttUsername = getIntent().getStringExtra(DeviceListActivity.EXTRA_MQTT_USERNAME);
+        deviceMqttPassword = getIntent().getStringExtra(DeviceListActivity.EXTRA_MQTT_PASSWORD);
+        deviceTopicPrefix = getIntent().getStringExtra(DeviceListActivity.EXTRA_TOPIC_PREFIX);
+
+        // Fallback default jika tidak ada extras (backward compatibility)
+        if (deviceBrokerUrl == null || deviceBrokerUrl.isEmpty()) {
+            deviceBrokerUrl = "tcp://broker.emqx.io:1883";
+        }
+        if (deviceTopicPrefix == null || deviceTopicPrefix.isEmpty()) {
+            deviceTopicPrefix = "smartfarm";
+        }
+    }
+
     @Override
     protected String getClientId() {
-        return "AndroidSmartFarm_MediaTanah";
+        return "AndroidSmartFarm_MediaTanah_" + System.currentTimeMillis();
+    }
+
+    /**
+     * Helper: bangun full topic dari prefix + suffix.
+     */
+    private String topic(String suffix) {
+        return deviceTopicPrefix + "/" + suffix;
     }
 
     /**
@@ -145,43 +183,46 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     @Override
     protected String[] getSubscriptionTopics() {
         return new String[]{
-                "smartfarm/#"  // Wildcard: sensor, jadwal, status, kontrol
+                deviceTopicPrefix + "/#"  // Wildcard: sensor, jadwal, status, kontrol
         };
     }
 
     @Override
     protected String getBrokerUrl() {
-        return "tcp://broker.emqx.io:1883";
+        return deviceBrokerUrl;
     }
 
     @Override
     protected String getMqttUsername() {
-        return "ardana_garden";
+        return (deviceMqttUsername != null && !deviceMqttUsername.isEmpty())
+                ? deviceMqttUsername : null;
     }
 
     @Override
     protected String getMqttPassword() {
-        return "rahasia1234";
+        return (deviceMqttPassword != null && !deviceMqttPassword.isEmpty())
+                ? deviceMqttPassword : null;
     }
 
     @Override
     protected void onMqttMessageReceived(String topic, String payload) {
         // Handle sensor data (topik sesuai dengan yang dipublish MCU)
-        switch (topic) {
-            case "smartfarm/kontrol/kelembapan":
-                updateKelembapan(payload);
-                return;
-            case "smartfarm/kontrol/ph":
-                updatePH(payload);
-                return;
-            case "smartfarm/sensor/data":
-                handleSensorData(payload);
-                return;
+        if (topic.equals(topic("kontrol/kelembapan"))) {
+            updateKelembapan(payload);
+            return;
+        }
+        if (topic.equals(topic("kontrol/ph"))) {
+            updatePH(payload);
+            return;
+        }
+        if (topic.equals(topic("sensor/data"))) {
+            handleSensorData(payload);
+            return;
         }
 
         // Handle jadwal & status dari MCU via manager
-        if (topic.equals(ValveScheduleManager.TOPIC_SCHEDULE_STATE)
-                || topic.equals(ValveScheduleManager.TOPIC_STATUS_VALVES)) {
+        if (topic.equals(scheduleManager.TOPIC_SCHEDULE_STATE)
+                || topic.equals(scheduleManager.TOPIC_STATUS_VALVES)) {
             scheduleManager.handleMqttMessage(topic, payload);
         }
     }
@@ -269,32 +310,32 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         // Kontrol manual valve — pompa otomatis ikut valve
         switchKranAir.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (suppressSwitchListener) return;
-            publishMQTT("smartfarm/kontrol/kran_air", isChecked ? "ON" : "OFF");
+            publishMQTT(topic("kontrol/kran_air"), isChecked ? "ON" : "OFF");
             updateAutoPump();
         });
 
         switchKranInsek.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (suppressSwitchListener) return;
-            publishMQTT("smartfarm/kontrol/kran_insektisida", isChecked ? "ON" : "OFF");
+            publishMQTT(topic("kontrol/kran_insektisida"), isChecked ? "ON" : "OFF");
             updateAutoPump();
         });
 
         switchKranPupuk.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (suppressSwitchListener) return;
-            publishMQTT("smartfarm/kontrol/kran_pupuk", isChecked ? "ON" : "OFF");
+            publishMQTT(topic("kontrol/kran_pupuk"), isChecked ? "ON" : "OFF");
             updateAutoPump();
         });
 
         switchKranBuang.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (suppressSwitchListener) return;
-            publishMQTT("smartfarm/kontrol/kran_pembuangan", isChecked ? "ON" : "OFF");
+            publishMQTT(topic("kontrol/kran_pembuangan"), isChecked ? "ON" : "OFF");
             updateAutoPump();
         });
 
         switchSumberDaya.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (suppressSwitchListener) return;
             String source = isChecked ? "AKI" : "PLN";
-            publishMQTT("smartfarm/kontrol/sumber_daya", source);
+            publishMQTT(topic("kontrol/sumber_daya"), source);
         });
     }
 
@@ -308,7 +349,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
                 || switchKranPupuk.isChecked()
                 || switchKranBuang.isChecked();
 
-        publishMQTT("smartfarm/kontrol/pompa", anyValveOn ? "ON" : "OFF");
+        publishMQTT(topic("kontrol/pompa"), anyValveOn ? "ON" : "OFF");
         updatePompaStatusUI(anyValveOn);
     }
 

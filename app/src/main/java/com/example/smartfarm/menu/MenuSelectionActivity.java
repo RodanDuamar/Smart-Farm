@@ -6,13 +6,13 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.smartfarm.R;
-import com.example.smartfarm.hidroponik.HidroponikActivity;
-import com.example.smartfarm.mediatanah.MediaTanahActivity;
+import com.example.smartfarm.device.DeviceConfig;
+import com.example.smartfarm.device.DeviceListActivity;
 import com.google.android.material.card.MaterialCardView;
 
 /**
  * Activity launcher yang menampilkan pilihan menu utama.
- * User dapat memilih antara mode Hidroponik atau Media Tanah.
+ * User memilih kategori (Hidroponik / Media Tanah) → masuk ke daftar device.
  */
 public class MenuSelectionActivity extends AppCompatActivity {
 
@@ -29,12 +29,13 @@ public class MenuSelectionActivity extends AppCompatActivity {
     }
 
     /**
-     * Navigasi ke Activity target.
+     * Navigasi ke DeviceListActivity dengan tipe device tertentu.
      *
-     * @param targetActivity class Activity tujuan
+     * @param deviceType tipe device (DeviceConfig.TYPE_HIDROPONIK / TYPE_MEDIA_TANAH)
      */
-    private void navigateTo(Class<?> targetActivity) {
-        Intent intent = new Intent(this, targetActivity);
+    private void navigateToDeviceList(String deviceType) {
+        Intent intent = new Intent(this, DeviceListActivity.class);
+        intent.putExtra(DeviceListActivity.EXTRA_DEVICE_TYPE, deviceType);
         startActivity(intent);
     }
 
@@ -45,11 +46,11 @@ public class MenuSelectionActivity extends AppCompatActivity {
 
     private void setupListeners() {
         cardHidroponik.setOnClickListener(v -> {
-            navigateTo(HidroponikActivity.class);
+            navigateToDeviceList(DeviceConfig.TYPE_HIDROPONIK);
         });
 
         cardMediaTanah.setOnClickListener(v -> {
-            navigateTo(MediaTanahActivity.class);
+            navigateToDeviceList(DeviceConfig.TYPE_MEDIA_TANAH);
         });
     }
 

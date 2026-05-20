@@ -46,18 +46,18 @@ public class ValveScheduleManager {
     /** Maximum jadwal per valve */
     public static final int MAX_SCHEDULES_PER_VALVE = 10;
 
-    // ==================== MQTT TOPICS ====================
+    // ==================== MQTT TOPICS (dinamis berdasarkan prefix) ====================
 
     /** App → MCU: kirim jadwal untuk disimpan di MCU */
-    public static final String TOPIC_SCHEDULE_SET = "smartfarm/jadwal/set";
+    public final String TOPIC_SCHEDULE_SET;
     /** App → MCU: hapus jadwal dari MCU */
-    public static final String TOPIC_SCHEDULE_DELETE = "smartfarm/jadwal/delete";
+    public final String TOPIC_SCHEDULE_DELETE;
     /** App → MCU: request sinkronisasi semua jadwal */
-    public static final String TOPIC_SCHEDULE_SYNC = "smartfarm/jadwal/sync";
+    public final String TOPIC_SCHEDULE_SYNC;
     /** MCU → App: semua jadwal yang tersimpan di MCU */
-    public static final String TOPIC_SCHEDULE_STATE = "smartfarm/jadwal/state";
+    public final String TOPIC_SCHEDULE_STATE;
     /** MCU → App: status ON/OFF semua valve dan pompa */
-    public static final String TOPIC_STATUS_VALVES = "smartfarm/status/valves";
+    public final String TOPIC_STATUS_VALVES;
 
     // ==================== STATE ====================
 
@@ -106,11 +106,25 @@ public class ValveScheduleManager {
 
     // ==================== CONSTRUCTOR ====================
 
-    public ValveScheduleManager(Context context, ScheduleCallback callback) {
+    /**
+     * Constructor dengan topic prefix dinamis.
+     *
+     * @param context     Context
+     * @param callback    Callback ke Activity
+     * @param topicPrefix Prefix topic MQTT (misal "smartfarm" atau "farm2")
+     */
+    public ValveScheduleManager(Context context, ScheduleCallback callback, String topicPrefix) {
         this.prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         this.callback = callback;
         this.schedules = new HashMap<>();
         this.valveStates = new HashMap<>();
+
+        // Build topic berdasarkan prefix
+        TOPIC_SCHEDULE_SET    = topicPrefix + "/jadwal/set";
+        TOPIC_SCHEDULE_DELETE = topicPrefix + "/jadwal/delete";
+        TOPIC_SCHEDULE_SYNC   = topicPrefix + "/jadwal/sync";
+        TOPIC_SCHEDULE_STATE  = topicPrefix + "/jadwal/state";
+        TOPIC_STATUS_VALVES   = topicPrefix + "/status/valves";
 
         // Inisialisasi
         for (int i = 1; i <= VALVE_COUNT; i++) {
@@ -120,6 +134,13 @@ public class ValveScheduleManager {
 
         // Load cache lokal
         loadLocalCache();
+    }
+
+    /**
+     * Constructor backward-compatible (default prefix "smartfarm").
+     */
+    public ValveScheduleManager(Context context, ScheduleCallback callback) {
+        this(context, callback, "smartfarm");
     }
 
     // ==================== MQTT COMMAND: App → MCU ====================
@@ -251,13 +272,10 @@ public class ValveScheduleManager {
      * @param payload Pesan payload
      */
     public void handleMqttMessage(String topic, String payload) {
-        switch (topic) {
-            case TOPIC_SCHEDULE_STATE:
-                handleScheduleState(payload);
-                break;
-            case TOPIC_STATUS_VALVES:
-                handleValveStatus(payload);
-                break;
+        if (TOPIC_SCHEDULE_STATE.equals(topic)) {
+            handleScheduleState(payload);
+        } else if (TOPIC_STATUS_VALVES.equals(topic)) {
+            handleValveStatus(payload);
         }
     }
 
