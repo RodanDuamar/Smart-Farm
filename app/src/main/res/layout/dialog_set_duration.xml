@@ -97,7 +97,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="💡 Pompa akan otomatis menyala selama valve aktif dan mati setelah semua valve selesai."
+        android:text="💡 Pompa akan otomatis menyala selama kran aktif dan mati setelah semua kran selesai."
         android:textSize="12sp"
         android:textColor="@color/text_hint"
         android:layout_marginTop="16dp"

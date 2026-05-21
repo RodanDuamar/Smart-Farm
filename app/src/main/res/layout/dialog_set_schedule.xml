@@ -187,7 +187,7 @@
             android:layout_marginTop="20dp"
             android:gravity="center"
             android:lineSpacingExtra="2dp"
-            android:text="💡 Valve akan menyala secara otomatis sesuai rentang waktu di atas pada hari yang dipilih."
+            android:text="💡 Kran akan menyala secara otomatis sesuai rentang waktu di atas pada hari yang dipilih."
             android:textColor="@color/text_hint"
             android:textSize="12sp" />
 

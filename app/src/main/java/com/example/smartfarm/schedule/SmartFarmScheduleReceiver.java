@@ -20,7 +20,6 @@ public class SmartFarmScheduleReceiver extends BroadcastReceiver {
 
     public static final String EXTRA_TOPICS = "extra_topics";
     public static final String EXTRA_PAYLOAD = "extra_payload";
-
     private static final String TAG = "SmartFarmScheduleRcvr";
     private static final String BROKER_URL = "tcp://broker.hivemq.com:1883";
 

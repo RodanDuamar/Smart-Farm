@@ -617,7 +617,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         // Update schedule display
         TextView tv = getCountdownTextView(valveIndex);
         if (tv != null && isOn) {
-            tv.setText("🟢 Aktif (oleh MCU)");
+            tv.setText("🟢 Aktif");
             tv.setTextColor(getColor(R.color.status_info));
         } else if (tv != null && !isOn) {
             refreshScheduleDisplay(valveIndex);
@@ -733,7 +733,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             // Pompa
             if (scheduleManager.isPumpOn()) {
                 layoutPompaTimerStatus.setVisibility(View.VISIBLE);
-                tvPompaTimerStatus.setText("Aktif (MCU)");
+                tvPompaTimerStatus.setText("Aktif");
             } else {
                 layoutPompaTimerStatus.setVisibility(View.GONE);
             }
@@ -852,7 +852,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
                         NotificationHelper.NOTIF_PH_TANAH_ASAM,
                         "⚠️ pH Tanah Terlalu Asam!",
                         "pH tanah saat ini " + ph + " (di bawah 5.5). "
-                                + "Kondisi terlalu asam, pertimbangkan menambahkan kapur!",
+                                + "Kondisi terlalu asam",
                         MediaTanahActivity.class);
             } else {
                 tvStatusPH.setText("Basa");
@@ -862,7 +862,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
                         NotificationHelper.NOTIF_PH_TANAH_BASA,
                         "⚠️ pH Tanah Terlalu Basa!",
                         "pH tanah saat ini " + ph + " (di atas 7.5). "
-                                + "Kondisi terlalu basa, pertimbangkan menambahkan pupuk organik!",
+                                + "Kondisi terlalu basa, pertimbangkan menambahkan pupuk!",
                         MediaTanahActivity.class);
             }
         } catch (NumberFormatException e) {
