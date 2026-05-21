@@ -1,6 +1,9 @@
 package com.example.smartfarm.hidroponik;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -11,9 +14,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.widget.SwitchCompat;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.example.smartfarm.R;
 import com.example.smartfarm.base.BaseSmartFarmActivity;
+import com.example.smartfarm.base.NotificationHelper; // Import helper Anda
 
 import org.json.JSONObject;
 
@@ -40,19 +46,20 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
         initViews();
         setupMQTT();
         setupControlListeners();
+
+        // Inisialisasi Notification Channels melalui Helper
+        NotificationHelper.createNotificationChannels(this);
+        checkNotificationPermission();
     }
 
-    // --- SINKRONISASI SAAT APLIKASI DIBUKA ---
     @Override
     protected void onResume() {
         super.onResume();
-        // Memicu sinkronisasi ulang saat aplikasi dibuka kembali
         requestStatusUpdate();
     }
 
     private void requestStatusUpdate() {
         try {
-            // Mengirim perintah khusus agar alat mengirimkan SEMUA status termasuk min/max
             publishMQTT("nutrisi/request", "get_all_status");
             Log.d("MQTT_SYNC", "Meminta data parameter dan status ke hardware...");
         } catch (Exception e) {
@@ -109,7 +116,6 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
                 json.put("min", valMin);
                 json.put("max", valMax);
 
-                // Publish ke topik set agar alat menyimpan nilai baru
                 publishMQTT("nutrisi/set/ppm", json.toString());
 
                 tvTdsMin.setText(min);
@@ -144,6 +150,14 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
         });
     }
 
+    private void checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, 101);
+            }
+        }
+    }
+
     @Override
     protected String getBrokerUrl() {
         return "tcp://broker.hivemq.com:1883";
@@ -165,36 +179,83 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
             try {
                 JSONObject json = new JSONObject(payload);
 
-                // 1. SINKRONISASI NILAI MIN/MAX (Parameter Alat)
+                // 1. Handling Sinkronisasi Min/Max
                 if (json.has("min")) {
                     String minVal = String.valueOf(json.optInt("min"));
                     tvTdsMin.setText(minVal);
-                    // Update input jika user sedang tidak fokus mengetik
-                    if (!etPpmTarget.isFocused()) {
-                        etPpmTarget.setText(minVal);
-                    }
+                    if (!etPpmTarget.isFocused()) etPpmTarget.setText(minVal);
                 }
                 if (json.has("max")) {
                     String maxVal = String.valueOf(json.optInt("max"));
                     tvTdsMax.setText(maxVal);
-                    if (!etPpmTargetMax.isFocused()) {
-                        etPpmTargetMax.setText(maxVal);
-                    }
+                    if (!etPpmTargetMax.isFocused()) etPpmTargetMax.setText(maxVal);
                 }
 
-                // 2. Handling Data Sensor
+                // 2. Handling Data Sensor & Menggunakan NotificationHelper
                 if (json.has("ppm")) {
                     int ppm = json.optInt("ppm");
                     tvTdsRealtime.setText(String.valueOf(ppm));
                     progressTds.setProgress(ppm);
-                    tvStatusTds.setText(ppm < 800 ? "RENDAH" : (ppm <= 1200 ? "NORMAL" : "TINGGI"));
+
+                    if (ppm < 800) {
+                        tvStatusTds.setText("RENDAH");
+                        NotificationHelper.sendWarningNotification(
+                                this,
+                                NotificationHelper.CHANNEL_HIDROPONIK,
+                                NotificationHelper.NOTIF_NUTRISI_KURANG,
+                                "Peringatan Nutrisi Hidroponik",
+                                "Kadar PPM hidroponik terlalu rendah (" + ppm + " ppm)",
+                                HidroponikActivity.class
+                        );
+                    } else if (ppm > 1200) {
+                        tvStatusTds.setText("TINGGI");
+                        NotificationHelper.sendWarningNotification(
+                                this,
+                                NotificationHelper.CHANNEL_HIDROPONIK,
+                                NotificationHelper.NOTIF_NUTRISI_BERLEBIH,
+                                "Peringatan Nutrisi Hidroponik",
+                                "Kadar PPM hidroponik terlalu tinggi (" + ppm + " ppm)",
+                                HidroponikActivity.class
+                        );
+                    } else {
+                        tvStatusTds.setText("NORMAL");
+                        // Batalkan notifikasi jika kondisi sudah kembali normal
+                        NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_NUTRISI_KURANG);
+                        NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_NUTRISI_BERLEBIH);
+                    }
                 }
 
                 if (json.has("ph")) {
                     double ph = json.optDouble("ph");
                     tvPhRealtime.setText(String.format(Locale.getDefault(), "%.1f", ph));
                     progressPh.setProgress((int) (ph * 10));
-                    tvStatusPh.setText((ph >= 5.5 && ph <= 6.5) ? "IDEAL" : "TIDAK STABIL");
+
+                    if (ph < 5.5) {
+                        tvStatusPh.setText("TERLALU ASAM");
+                        NotificationHelper.sendWarningNotification(
+                                this,
+                                NotificationHelper.CHANNEL_HIDROPONIK,
+                                NotificationHelper.NOTIF_PH_AIR_ASAM,
+                                "Peringatan pH Hidroponik",
+                                "Air terlalu asam (pH: " + String.format(Locale.getDefault(), "%.1f", ph) + ")",
+                                HidroponikActivity.class
+                        );
+                    } else if (ph > 6.5) {
+                        tvStatusPh.setText("TERLALU BASA");
+                        NotificationHelper.sendWarningNotification(
+                                this,
+                                NotificationHelper.CHANNEL_HIDROPONIK,
+                                NotificationHelper.NOTIF_PH_AIR_BASA,
+                                "Peringatan pH Hidroponik",
+                                "Air terlalu basa (pH: " + String.format(Locale.getDefault(), "%.1f", ph) + ")",
+                                HidroponikActivity.class
+                        );
+                    } else {
+                        tvStatusPh.setText("IDEAL");
+                        // Batalkan notifikasi pH jika sudah ideal
+                        NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_PH_AIR_ASAM);
+                        NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_PH_AIR_BASA);
+                    }
                 }
 
                 // 3. Sinkronisasi Status Saklar & Mode
