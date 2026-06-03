@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.smartfarm.R;
 import com.example.smartfarm.base.BaseSmartFarmActivity;
+import com.example.smartfarm.base.FirebaseMonitorHelper;
 import com.example.smartfarm.base.NotificationHelper; // Import helper Anda
 
 import org.json.JSONObject;
@@ -26,6 +27,9 @@ import org.json.JSONObject;
 import java.util.Locale;
 
 public class HidroponikActivity extends BaseSmartFarmActivity {
+
+    // --- CONSTANTS ---
+    private static final String FIREBASE_COLLECTION = "sensor_hidroponik";
 
     // --- DEKLARASI VARIABEL ---
     private TextView tvTdsRealtime, tvPhRealtime, tvModeStatus, tvStatusTds, tvStatusPh;
@@ -197,6 +201,10 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
                     tvTdsRealtime.setText(String.valueOf(ppm));
                     progressTds.setProgress(ppm);
 
+                    // Log ke Firebase Firestore
+                    FirebaseMonitorHelper.getInstance()
+                            .logSensorData(FIREBASE_COLLECTION, "ppm", ppm);
+
                     if (ppm < 800) {
                         tvStatusTds.setText("RENDAH");
                         NotificationHelper.sendWarningNotification(
@@ -229,6 +237,10 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
                     double ph = json.optDouble("ph");
                     tvPhRealtime.setText(String.format(Locale.getDefault(), "%.1f", ph));
                     progressPh.setProgress((int) (ph * 10));
+
+                    // Log ke Firebase Firestore
+                    FirebaseMonitorHelper.getInstance()
+                            .logSensorData(FIREBASE_COLLECTION, "ph", ph);
 
                     if (ph < 5.5) {
                         tvStatusPh.setText("TERLALU ASAM");

@@ -58,6 +58,8 @@ public class ValveScheduleManager {
     public static final String TOPIC_SCHEDULE_STATE = "smartfarm/jadwal/state";
     /** MCU → App: status ON/OFF semua valve dan pompa */
     public static final String TOPIC_STATUS_VALVES = "smartfarm/status/valves";
+    /** App → MCU: kirim tanggal tanam untuk penjadwalan pupuk berdasarkan umur tanaman */
+    public static final String TOPIC_TGL_TANAM = "smartfarm/kontrol/tgl_tanam";
 
     // ==================== STATE ====================
 

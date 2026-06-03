@@ -1,6 +1,8 @@
 package com.example.smartfarm.mediatanah;
 
 import android.Manifest;
+import android.app.DatePickerDialog;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -20,6 +22,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.smartfarm.R;
 import com.example.smartfarm.base.BaseSmartFarmActivity;
+import com.example.smartfarm.base.FirebaseMonitorHelper;
 import com.example.smartfarm.base.NotificationHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
@@ -27,10 +30,15 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import org.json.JSONObject;
 
@@ -49,17 +57,24 @@ import org.json.JSONObject;
  * - smartfarm/sensor/data         → data sensor suhu & kelembapan udara (JSON)
  * - smartfarm/jadwal/state        → daftar jadwal dari MCU
  * - smartfarm/status/valves       → status ON/OFF valve & pompa dari MCU
+ * - smartfarm/kontrol/tgl_tanam   → tanggal tanam diterima dari MCU (sync)
  *
  * MQTT Publish:
  * - smartfarm/jadwal/set          → kirim jadwal ke MCU
  * - smartfarm/jadwal/delete       → hapus jadwal dari MCU
  * - smartfarm/jadwal/sync         → request sinkronisasi
+ * - smartfarm/kontrol/tgl_tanam   → kirim tanggal tanam ke MCU (Format: YYYY-MM-DD)
  * - smartfarm/kontrol/*           → kontrol manual valve/pompa
  */
 public class MediaTanahActivity extends BaseSmartFarmActivity
         implements ValveScheduleManager.ScheduleCallback {
 
     private static final String TAG = "MediaTanah";
+
+    // ==================== CONSTANTS ====================
+    private static final String FIREBASE_COLLECTION = "sensor_media_tanah";
+    private static final String PREFS_TGL_TANAM = "tgl_tanam_prefs";
+    private static final String KEY_TGL_TANAM = "tanggal_tanam"; // Format: YYYY-MM-DD
 
     // ==================== VIEWS ====================
 
@@ -78,6 +93,10 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     // Schedule display per valve
     private TextView tvCountdownKranAir, tvCountdownKranInsek, tvCountdownKranPupuk, tvCountdownKranBuang;
     private TextView tvPompaStatus;
+
+    // Tanggal Penanaman views
+    private TextView tvTanggalTanam, tvUmurTanaman;
+    private com.google.android.material.button.MaterialButton btnSetTanggalTanam;
 
     // Jadwal Status Card views (menampilkan valve yang sedang aktif dari MCU)
     private MaterialCardView cardJadwalStatus;
@@ -128,9 +147,13 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         initViews();
         setupSwitchListeners();
         setupTimerButtons();
+        setupTanggalTanam();
 
         // Tampilkan jadwal dari cache lokal
         refreshAllScheduleDisplays();
+
+        // Load tanggal tanam tersimpan
+        loadTanggalTanam();
     }
 
     @Override
@@ -176,6 +199,10 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
                 return;
             case "smartfarm/sensor/data":
                 handleSensorData(payload);
+                return;
+            case ValveScheduleManager.TOPIC_TGL_TANAM:
+                // Menerima tanggal tanam dari MCU (sinkronisasi)
+                handleTanggalTanamFromMcu(payload);
                 return;
         }
 
@@ -263,6 +290,11 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         tvKranInsekTimerStatus = findViewById(R.id.tvValve2TimerStatus);
         tvKranPupukTimerStatus = findViewById(R.id.tvValve3TimerStatus);
         tvKranBuangTimerStatus = findViewById(R.id.tvValve4TimerStatus);
+
+        // Tanggal Penanaman views
+        tvTanggalTanam = findViewById(R.id.tvTanggalTanam);
+        tvUmurTanaman = findViewById(R.id.tvUmurTanaman);
+        btnSetTanggalTanam = findViewById(R.id.btnSetTanggalTanam);
     }
 
     private void setupSwitchListeners() {
@@ -317,6 +349,171 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         btnTimerKranInsek.setOnClickListener(v -> showScheduleListDialog("Kran Insektisida", 2));
         btnTimerKranPupuk.setOnClickListener(v -> showScheduleListDialog("Kran Pupuk", 3));
         btnTimerKranBuang.setOnClickListener(v -> showScheduleListDialog("Kran Pembuangan", 4));
+    }
+
+    // ==================== TANGGAL PENANAMAN ====================
+
+    /**
+     * Setup tombol tanggal penanaman.
+     */
+    private void setupTanggalTanam() {
+        btnSetTanggalTanam.setOnClickListener(v -> showDatePickerDialog());
+    }
+
+    /**
+     * Tampilkan DatePicker dialog untuk memilih tanggal tanam.
+     * Tanggal yang dipilih akan dikirim ke MCU via MQTT dan disimpan lokal.
+     */
+    private void showDatePickerDialog() {
+        Calendar cal = Calendar.getInstance();
+
+        // Jika ada tanggal tersimpan, gunakan sebagai default
+        String saved = getSavedTanggalTanam();
+        if (saved != null && !saved.isEmpty()) {
+            try {
+                String[] parts = saved.split("-");
+                cal.set(Integer.parseInt(parts[0]),
+                        Integer.parseInt(parts[1]) - 1,
+                        Integer.parseInt(parts[2]));
+            } catch (Exception e) {
+                Log.e(TAG, "Error parsing saved date: " + saved, e);
+            }
+        }
+
+        DatePickerDialog datePickerDialog = new DatePickerDialog(
+                this,
+                (view, year, month, dayOfMonth) -> {
+                    // Format: YYYY-MM-DD (sesuai dengan yang diharapkan MCU)
+                    String tanggal = String.format(Locale.getDefault(),
+                            "%04d-%02d-%02d", year, month + 1, dayOfMonth);
+
+                    // Simpan lokal
+                    saveTanggalTanam(tanggal);
+
+                    // Kirim ke MCU via MQTT
+                    publishTanggalTanam(tanggal);
+
+                    // Update UI
+                    updateTanggalTanamUI(tanggal);
+
+                    Toast.makeText(this, "\u2705 Tanggal tanam diatur: " + tanggal,
+                            Toast.LENGTH_SHORT).show();
+                },
+                cal.get(Calendar.YEAR),
+                cal.get(Calendar.MONTH),
+                cal.get(Calendar.DAY_OF_MONTH)
+        );
+
+        // Tidak boleh memilih tanggal di masa depan
+        datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis());
+
+        datePickerDialog.show();
+    }
+
+    /**
+     * Simpan tanggal tanam ke SharedPreferences.
+     */
+    private void saveTanggalTanam(String tanggal) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_TGL_TANAM, MODE_PRIVATE);
+        prefs.edit().putString(KEY_TGL_TANAM, tanggal).apply();
+        Log.d(TAG, "Tanggal tanam disimpan: " + tanggal);
+    }
+
+    /**
+     * Load tanggal tanam dari SharedPreferences dan update UI.
+     */
+    private void loadTanggalTanam() {
+        String tanggal = getSavedTanggalTanam();
+        if (tanggal != null && !tanggal.isEmpty()) {
+            updateTanggalTanamUI(tanggal);
+        }
+    }
+
+    /**
+     * Ambil tanggal tanam tersimpan dari SharedPreferences.
+     */
+    private String getSavedTanggalTanam() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_TGL_TANAM, MODE_PRIVATE);
+        return prefs.getString(KEY_TGL_TANAM, null);
+    }
+
+    /**
+     * Publish tanggal tanam ke MCU via MQTT.
+     * Format payload: "YYYY-MM-DD" (sesuai dengan yang diharapkan MCU)
+     * MCU akan menggunakan tanggal ini untuk menghitung umur tanaman
+     * dan menentukan jadwal pupuk yang sesuai.
+     */
+    private void publishTanggalTanam(String tanggal) {
+        publishMQTT(ValveScheduleManager.TOPIC_TGL_TANAM, tanggal);
+
+        // Log tanggal tanam ke Firebase (metadata, bukan history)
+        FirebaseMonitorHelper.getInstance()
+                .logMetadata(FIREBASE_COLLECTION, "tanggal_tanam", tanggal);
+
+        Log.d(TAG, "Tanggal tanam dikirim ke MCU: " + tanggal);
+    }
+
+    /**
+     * Handle tanggal tanam yang diterima dari MCU (sinkronisasi).
+     * MCU bisa mengirim balik tanggal tanam yang tersimpan di sisinya.
+     */
+    private void handleTanggalTanamFromMcu(String payload) {
+        if (payload != null && payload.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            saveTanggalTanam(payload);
+            updateTanggalTanamUI(payload);
+            Log.d(TAG, "Tanggal tanam diterima dari MCU: " + payload);
+        } else {
+            Log.w(TAG, "Format tanggal tanam dari MCU tidak valid: " + payload);
+        }
+    }
+
+    /**
+     * Update tampilan tanggal tanam dan umur tanaman.
+     * Menghitung selisih hari antara tanggal tanam dan hari ini.
+     */
+    private void updateTanggalTanamUI(String tanggal) {
+        if (tanggal == null || tanggal.isEmpty()) {
+            tvTanggalTanam.setText("Belum diatur");
+            tvTanggalTanam.setTextColor(getColor(R.color.text_hint));
+            tvUmurTanaman.setText("- hari");
+            tvUmurTanaman.setTextColor(getColor(R.color.text_hint));
+            btnSetTanggalTanam.setText("Atur Tanggal Tanam");
+            return;
+        }
+
+        try {
+            // Format tanggal untuk ditampilkan (DD MMM YYYY)
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            SimpleDateFormat displayFormat = new SimpleDateFormat("dd MMM yyyy", new Locale("id", "ID"));
+            inputFormat.setTimeZone(TimeZone.getDefault());
+            displayFormat.setTimeZone(TimeZone.getDefault());
+
+            Date plantDate = inputFormat.parse(tanggal);
+            if (plantDate != null) {
+                // Tampilkan tanggal
+                tvTanggalTanam.setText(displayFormat.format(plantDate));
+                tvTanggalTanam.setTextColor(getColor(R.color.status_good));
+
+                // Hitung umur tanaman (selisih hari)
+                long diffMillis = System.currentTimeMillis() - plantDate.getTime();
+                long diffDays = TimeUnit.MILLISECONDS.toDays(diffMillis);
+
+                if (diffDays >= 0) {
+                    tvUmurTanaman.setText(diffDays + " hari");
+                    tvUmurTanaman.setTextColor(getColor(R.color.status_info));
+                } else {
+                    tvUmurTanaman.setText("Belum ditanam");
+                    tvUmurTanaman.setTextColor(getColor(R.color.text_hint));
+                }
+
+                // Update button text
+                btnSetTanggalTanam.setText("Ubah Tanggal Tanam");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error formatting tanggal tanam: " + tanggal, e);
+            tvTanggalTanam.setText(tanggal);
+            tvUmurTanaman.setText("- hari");
+        }
     }
 
     // ==================== SCHEDULE LIST DIALOG ====================
@@ -802,6 +999,10 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             tvKelembapan.setText(String.valueOf(kelInt));
             progressKelembapan.setProgress(kelInt);
 
+            // Log ke Firebase Firestore
+            FirebaseMonitorHelper.getInstance()
+                    .logSensorData(FIREBASE_COLLECTION, "kelembapan", kelembapan);
+
             if (kelembapan >= 40 && kelembapan <= 80) {
                 tvStatusKelembapan.setText("Ideal");
                 tvStatusKelembapan.setTextColor(getColor(R.color.status_good));
@@ -839,6 +1040,10 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             tvPH.setText(String.valueOf(ph));
             progressPH.setProgress(Math.round(ph * 10));
 
+            // Log ke Firebase Firestore
+            FirebaseMonitorHelper.getInstance()
+                    .logSensorData(FIREBASE_COLLECTION, "ph", ph);
+
             if (ph >= 5.5 && ph <= 7.5) {
                 tvStatusPH.setText("Ideal");
                 tvStatusPH.setTextColor(getColor(R.color.status_good));
@@ -875,6 +1080,10 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             float suhu = Float.parseFloat(value);
             tvSuhu.setText(String.valueOf(suhu));
             progressSuhu.setProgress(Math.round(suhu));
+
+            // Log ke Firebase Firestore
+            FirebaseMonitorHelper.getInstance()
+                    .logSensorData(FIREBASE_COLLECTION, "suhu", suhu);
 
             if (suhu >= 15 && suhu <= 35) {
                 tvStatusSuhu.setText("Ideal");
