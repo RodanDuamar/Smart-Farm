@@ -77,4 +77,14 @@
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
     <color name="transparent">#00000000</color>
+
+    <!-- Tank Indicator Colors - Vitamin A (Green) -->
+    <color name="tank_vitamin_a">#43A047</color>
+    <color name="tank_vitamin_a_light">#81C784</color>
+    <color name="tank_vitamin_a_dark">#2E7D32</color>
+
+    <!-- Tank Indicator Colors - Vitamin B (Blue) -->
+    <color name="tank_vitamin_b">#1E88E5</color>
+    <color name="tank_vitamin_b_light">#64B5F6</color>
+    <color name="tank_vitamin_b_dark">#1565C0</color>
 </resources>

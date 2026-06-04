@@ -35,6 +35,7 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
     private TextView tvTdsRealtime, tvPhRealtime, tvModeStatus, tvStatusTds, tvStatusPh;
     private TextView tvTdsMin, tvTdsMax;
     private ProgressBar progressTds, progressPh;
+    private TankView tankVitaminA, tankVitaminB;
     private SwitchCompat switchPompaA, switchPompaB, switchPompaAir;
     private EditText etPpmTarget, etPpmTargetMax;
     private View btnUpdateParameter, cardKontrolPompa;
@@ -89,6 +90,8 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
         etPpmTargetMax     = findViewById(R.id.etPpmTargetMax);
         btnUpdateParameter = findViewById(R.id.btnUpdateParameter);
         switchAuto         = findViewById(R.id.switchAuto);
+        tankVitaminA       = findViewById(R.id.tankVitaminA);
+        tankVitaminB       = findViewById(R.id.tankVitaminB);
     }
 
     private void setupControlListeners() {
@@ -174,7 +177,13 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
 
     @Override
     protected String[] getSubscriptionTopics() {
-        return new String[]{"nutrisi/sensor", "nutrisi/status"};
+        return new String[]{
+                "nutrisi/sensor",
+                "nutrisi/status",
+                "nutrisi/stock/vita",
+                "nutrisi/stock/vitb",
+                "nutrisi/warning"
+        };
     }
 
     @Override
@@ -281,9 +290,70 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
                 if (json.has("dosing2")) switchPompaB.setChecked(json.optBoolean("dosing2"));
                 if (json.has("water_pump")) switchPompaAir.setChecked(json.optBoolean("water_pump"));
 
+                // 4. Handling Kapasitas Tanki Vitamin A & B
+                //    Dari topic nutrisi/sensor: key "vita_pct" dan "vitb_pct"
+                //    Dari topic nutrisi/stock/vita atau nutrisi/stock/vitb: key "stock_pct"
+                if (topic.equals("nutrisi/stock/vita") && json.has("stock_pct")) {
+                    int vitaPct = (int) Math.round(json.optDouble("stock_pct", 0));
+                    updateTankVitaminA(vitaPct);
+                } else if (topic.equals("nutrisi/stock/vitb") && json.has("stock_pct")) {
+                    int vitbPct = (int) Math.round(json.optDouble("stock_pct", 0));
+                    updateTankVitaminB(vitbPct);
+                } else {
+                    // Dari topic nutrisi/sensor (data ringkasan)
+                    if (json.has("vita_pct")) {
+                        int vitaPct = (int) Math.round(json.optDouble("vita_pct", 0));
+                        updateTankVitaminA(vitaPct);
+                    }
+                    if (json.has("vitb_pct")) {
+                        int vitbPct = (int) Math.round(json.optDouble("vitb_pct", 0));
+                        updateTankVitaminB(vitbPct);
+                    }
+                }
+
+                // 5. Handling Warning: notifikasi stok vitamin kritis
+                if (json.has("vita_critical") && json.optBoolean("vita_critical")) {
+                    NotificationHelper.sendWarningNotification(
+                            this,
+                            NotificationHelper.CHANNEL_HIDROPONIK,
+                            NotificationHelper.NOTIF_STOK_VITA_KRITIS,
+                            "Stok Vitamin A Kritis!",
+                            "Stok cairan Vitamin A hampir habis, segera isi ulang.",
+                            HidroponikActivity.class
+                    );
+                }
+                if (json.has("vitb_critical") && json.optBoolean("vitb_critical")) {
+                    NotificationHelper.sendWarningNotification(
+                            this,
+                            NotificationHelper.CHANNEL_HIDROPONIK,
+                            NotificationHelper.NOTIF_STOK_VITB_KRITIS,
+                            "Stok Vitamin B Kritis!",
+                            "Stok cairan Vitamin B hampir habis, segera isi ulang.",
+                            HidroponikActivity.class
+                    );
+                }
+
             } catch (Exception e) {
                 Log.e("MQTT_PARSE", "Gagal sinkronisasi: " + e.getMessage());
             }
         });
+    }
+
+    // --- Helper: update TankView Vitamin A ---
+    private void updateTankVitaminA(int percent) {
+        if (tankVitaminA != null) {
+            tankVitaminA.setPercent(percent);
+        }
+        FirebaseMonitorHelper.getInstance()
+                .logSensorData(FIREBASE_COLLECTION, "vita_pct", percent);
+    }
+
+    // --- Helper: update TankView Vitamin B ---
+    private void updateTankVitaminB(int percent) {
+        if (tankVitaminB != null) {
+            tankVitaminB.setPercent(percent);
+        }
+        FirebaseMonitorHelper.getInstance()
+                .logSensorData(FIREBASE_COLLECTION, "vitb_pct", percent);
     }
 }

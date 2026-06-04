@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="TankView">
+        <attr name="tankPercent" format="integer" />
+        <attr name="tankLabel" format="string" />
+        <attr name="tankWaterColor" format="color" />
+        <attr name="tankWaterColorLight" format="color" />
+        <attr name="tankWaterColorDark" format="color" />
+    </declare-styleable>
+</resources>
