@@ -76,6 +76,9 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     private static final String PREFS_TGL_TANAM = "tgl_tanam_prefs";
     private static final String KEY_TGL_TANAM = "tanggal_tanam"; // Format: YYYY-MM-DD
 
+    // MQTT topic untuk publish mode operasi (AUTO/MANUAL)
+    private static final String TOPIC_MODE = "smartfarm/kontrol/mode";
+
     // ==================== VIEWS ====================
 
     // Sensor views
@@ -86,6 +89,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
     private MaterialSwitch switchKranAir, switchKranInsek, switchKranPupuk, switchKranBuang;
     private TextView tvPompaOnOff;
     private MaterialSwitch switchSumberDaya;
+    private MaterialSwitch switchModeOperasi;
 
     // Timer/schedule buttons
     private ImageView btnTimerKranAir, btnTimerKranInsek, btnTimerKranPupuk, btnTimerKranBuang;
@@ -264,6 +268,7 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         switchKranPupuk = findViewById(R.id.switchKranPupuk);
         switchKranBuang = findViewById(R.id.switchKranBuang);
         switchSumberDaya = findViewById(R.id.switchSumberDaya);
+        switchModeOperasi = findViewById(R.id.switchModeOperasi);
 
         // Timer/schedule buttons
         btnTimerKranAir = findViewById(R.id.btnTimerValve1);
@@ -327,6 +332,14 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
             if (suppressSwitchListener) return;
             String source = isChecked ? "AKI" : "PLN";
             publishMQTT("smartfarm/kontrol/sumber_daya", source);
+        });
+
+        // Mode operasi: checked = AUTO, unchecked = MANUAL
+        switchModeOperasi.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressSwitchListener) return;
+            String mode = isChecked ? "AUTO" : "MANUAL";
+            publishMQTT(TOPIC_MODE, mode);
+            Log.d(TAG, "Mode dikirim ke MCU: " + mode);
         });
     }
 
@@ -873,8 +886,13 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
 
     @Override
     public void onModeChanged(String mode) {
-        // Bisa digunakan untuk menampilkan indicator mode AUTO/MANUAL jika diperlukan
-        Log.d(TAG, "Mode MCU: " + mode);
+        // Sinkronisasi posisi switch mode dari status MCU
+        // AUTO = checked (true), MANUAL = unchecked (false)
+        boolean isAuto = "AUTO".equalsIgnoreCase(mode);
+        suppressSwitchListener = true;
+        switchModeOperasi.setChecked(isAuto);
+        suppressSwitchListener = false;
+        Log.d(TAG, "Mode MCU disinkronkan: " + mode + " → switch=" + isAuto);
     }
 
     // ==================== UI HELPER METHODS ====================
