@@ -2,6 +2,7 @@ package com.example.smartfarm.mediatanah;
 
 import android.Manifest;
 import android.app.DatePickerDialog;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -295,6 +296,12 @@ public class MediaTanahActivity extends BaseSmartFarmActivity
         tvKranInsekTimerStatus = findViewById(R.id.tvValve2TimerStatus);
         tvKranPupukTimerStatus = findViewById(R.id.tvValve3TimerStatus);
         tvKranBuangTimerStatus = findViewById(R.id.tvValve4TimerStatus);
+
+        // Data Historis button
+        findViewById(R.id.btnDataHistoris).setOnClickListener(v -> {
+            Intent intent = new Intent(this, DataHistorisTanahActivity.class);
+            startActivity(intent);
+        });
 
         // Tanggal Penanaman views
         tvTanggalTanam = findViewById(R.id.tvTanggalTanam);

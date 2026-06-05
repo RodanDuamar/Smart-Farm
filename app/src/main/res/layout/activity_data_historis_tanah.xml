@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/surface"
+    tools:context=".mediatanah.DataHistorisTanahActivity">
+
+    <!-- ==================== TOOLBAR ==================== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@color/surface_card"
+        android:elevation="2dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="8dp">
+
+        <!-- Back Button -->
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:src="@drawable/baseline_arrow_back_24"
+            android:contentDescription="Kembali"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+
+        <!-- App Logo -->
+        <ImageView
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_app_logo"
+            android:contentDescription="Logo" />
+
+        <!-- Title & Subtitle -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Data Historis"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
+
+            <TextView
+                android:id="@+id/tvSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Menampilkan 50 data terakhir"
+                android:textSize="12sp"
+                android:textColor="@color/text_hint" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ==================== SCROLLABLE CONTENT ==================== -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="24dp">
+
+            <!-- ============ Loading Indicator ============ -->
+            <LinearLayout
+                android:id="@+id/layoutLoading"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="visible">
+
+                <ProgressBar
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:indeterminateTint="@color/primary" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Memuat data historis..."
+                    android:textSize="14sp"
+                    android:textColor="@color/text_hint"
+                    android:layout_marginTop="12dp" />
+            </LinearLayout>
+
+            <!-- ============ Empty State ============ -->
+            <LinearLayout
+                android:id="@+id/layoutEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📊"
+                    android:textSize="48sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Belum ada data historis"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Data akan muncul setelah sensor mengirim data"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_hint"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+
+            <!-- ============ Charts Container ============ -->
+            <LinearLayout
+                android:id="@+id/layoutCharts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- ============ CARD: Kelembapan Tanah ============ -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="1dp"
+                    android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <!-- Header -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="8dp">
+
+                            <!-- Icon -->
+                            <FrameLayout
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:background="@drawable/bg_icon_circle_blue">
+
+                                <ImageView
+                                    android:layout_width="20dp"
+                                    android:layout_height="20dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_water_drop_blue"
+                                    android:contentDescription="Moisture Icon" />
+                            </FrameLayout>
+
+                            <!-- Title -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Kelembapan Tanah"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_primary" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Capacitive Soil Moisture (%)"
+                                    android:textSize="11sp"
+                                    android:textColor="@color/text_hint" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Chart -->
+                        <com.github.mikephil.charting.charts.LineChart
+                            android:id="@+id/chartKelembapan"
+                            android:layout_width="match_parent"
+                            android:layout_height="200dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ============ CARD: Suhu Udara ============ -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="1dp"
+                    android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <!-- Header -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="8dp">
+
+                            <!-- Icon -->
+                            <FrameLayout
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:background="@drawable/bg_icon_circle_orange">
+
+                                <ImageView
+                                    android:layout_width="20dp"
+                                    android:layout_height="20dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_temperature"
+                                    android:contentDescription="Temperature Icon" />
+                            </FrameLayout>
+
+                            <!-- Title -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Suhu Udara"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_primary" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="SHT31 (°C)"
+                                    android:textSize="11sp"
+                                    android:textColor="@color/text_hint" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Chart -->
+                        <com.github.mikephil.charting.charts.LineChart
+                            android:id="@+id/chartSuhu"
+                            android:layout_width="match_parent"
+                            android:layout_height="200dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ============ CARD: pH Tanah ============ -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/surface_card"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="1dp"
+                    android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <!-- Header -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="8dp">
+
+                            <!-- Icon -->
+                            <FrameLayout
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:background="@drawable/bg_icon_circle_purple">
+
+                                <ImageView
+                                    android:layout_width="20dp"
+                                    android:layout_height="20dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_flask"
+                                    android:contentDescription="pH Icon" />
+                            </FrameLayout>
+
+                            <!-- Title -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:layout_marginStart="12dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="pH Tanah"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_primary" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Analog pH Sensor"
+                                    android:textSize="11sp"
+                                    android:textColor="@color/text_hint" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Chart -->
+                        <com.github.mikephil.charting.charts.LineChart
+                            android:id="@+id/chartPH"
+                            android:layout_width="match_parent"
+                            android:layout_height="200dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</LinearLayout>

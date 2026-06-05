@@ -53,13 +53,34 @@
             android:paddingTop="20dp"
             android:paddingBottom="24dp">
 
-            <!-- Section Title -->
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- Section Title with Data Historis Button -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="MONITORING SENSOR"
-                style="@style/SmartFarm.SectionTitle"
-                android:layout_marginBottom="12dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="MONITORING SENSOR"
+                    style="@style/SmartFarm.SectionTitle" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDataHistoris"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="Data Historis"
+                    android:textAllCaps="false"
+                    android:textSize="11sp"
+                    app:cornerRadius="18dp"
+                    app:icon="@drawable/baseline_arrow_upward_24"
+                    app:iconSize="14dp"
+                    app:iconGravity="textEnd"
+                    style="@style/Widget.Material3.Button.TonalButton" />
+            </LinearLayout>
 
             <!-- ============ CARD: Kelembapan Tanah ============ -->
             <com.google.android.material.card.MaterialCardView

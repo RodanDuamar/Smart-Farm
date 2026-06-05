@@ -30,6 +30,9 @@
         <activity
             android:name=".mediatanah.MediaTanahActivity"
             android:exported="false" />
+        <activity
+            android:name=".mediatanah.DataHistorisTanahActivity"
+            android:exported="false" />
 
         <!--
             ScheduleAlarmReceiver dan BootReceiver dipertahankan sebagai no-op.
