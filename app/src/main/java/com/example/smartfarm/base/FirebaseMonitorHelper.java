@@ -128,6 +128,9 @@ public class FirebaseMonitorHelper {
     /**
      * Push data ke subcollection "history" dengan throttle.
      * Max 1x per HISTORY_THROTTLE_MS per collection.
+     *
+     * Document ID menggunakan format timestamp (yyyyMMdd_HHmmss_SSS)
+     * agar data tersusun kronologis di Firestore console untuk kemudahan analisis.
      */
     private void pushHistoryThrottled(String collection, Map<String, Object> data) {
         long now = System.currentTimeMillis();
@@ -141,12 +144,19 @@ public class FirebaseMonitorHelper {
         // Tulis ke history
         lastHistoryWrite.put(collection, now);
 
+        // Gunakan timestamp sebagai document ID agar urut kronologis
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(
+                "yyyyMMdd_HHmmss_SSS", java.util.Locale.getDefault());
+        sdf.setTimeZone(java.util.TimeZone.getDefault());
+        String docId = sdf.format(new java.util.Date(now));
+
         db.collection(collection)
                 .document("latest")
                 .collection("history")
-                .add(data)
-                .addOnSuccessListener(docRef ->
-                        Log.d(TAG, "History pushed [" + collection + "]: " + docRef.getId()))
+                .document(docId)
+                .set(data)
+                .addOnSuccessListener(aVoid ->
+                        Log.d(TAG, "History pushed [" + collection + "]: " + docId))
                 .addOnFailureListener(e ->
                         Log.e(TAG, "History push gagal [" + collection + "]: " + e.getMessage()));
     }
