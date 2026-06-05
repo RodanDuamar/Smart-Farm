@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        Declare-styleable untuk TankIndicatorView.
+        File ini WAJIB ada di res/values/attrs.xml agar atribut custom
+        app:tankLabel, app:tankWaterColor, dll. tidak menyebabkan crash
+        saat layout di-inflate.
+
+        Tanpa file ini, InflateException akan muncul:
+        "Binary XML file ... Error inflating class TankIndicatorView"
+    -->
+    <declare-styleable name="TankIndicatorView">
+
+        <!-- Label teks yang ditampilkan di bawah tanki (contoh: "Vitamin A") -->
+        <attr name="tankLabel" format="string" />
+
+        <!-- Warna utama air/cairan di dalam tanki -->
+        <attr name="tankWaterColor" format="color" />
+
+        <!-- Warna terang air untuk efek gelombang overlay -->
+        <attr name="tankWaterColorLight" format="color" />
+
+        <!-- Warna border/tepi tanki dan tutup atas -->
+        <attr name="tankBorderColor" format="color" />
+
+        <!-- Persentase awal isi tanki (0–100), digunakan untuk preview dan nilai default -->
+        <attr name="tankPercentage" format="integer" />
+
+    </declare-styleable>
+
+</resources>

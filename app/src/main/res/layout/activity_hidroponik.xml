@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F1F8E9"> <!-- Hijau Mint Segar -->
+    android:background="#F1F8E9">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -229,7 +229,171 @@
             </RelativeLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- ============ KONTROL MANUAL (DENGAN ID UNTUK DISABLE) ============ -->
+        <!-- ============ CARD: KAPASITAS TANKI VITAMIN ============ -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#FFFFFF"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="3dp"
+            app:strokeColor="#C8E6C9"
+            app:strokeWidth="1.5dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="4dp">
+
+                    <ImageView
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="@drawable/bg_icon_circle_green"
+                        android:backgroundTint="#E8F5E9"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_flask"
+                        app:tint="#2E7D32" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginStart="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Kapasitas Tanki Vitamin"
+                            android:textSize="15sp"
+                            android:textColor="#1B5E20"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Level Nutrisi A &amp; B"
+                            android:textSize="11sp"
+                            android:textColor="#9E9E9E" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#F1F8E9"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:baselineAligned="false">
+
+                    <!-- Tank Vitamin A -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="8dp">
+
+                        <com.example.smartfarm.hidroponik.TankIndicatorView
+                            android:id="@+id/tankVitaminA"
+                            android:layout_width="90dp"
+                            android:layout_height="200dp"
+                            app:tankLabel="Vitamin A"
+                            app:tankWaterColor="#43A047"
+                            app:tankWaterColorLight="#A5D6A7"
+                            app:tankBorderColor="#2E7D32"
+                            app:tankPercentage="65" />
+
+                        <TextView
+                            android:id="@+id/tvTankAStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="-- %"
+                            android:textSize="14sp"
+                            android:textColor="#2E7D32"
+                            android:textStyle="bold"
+                            android:layout_marginTop="4dp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="180dp"
+                        android:background="#E8F5E9"
+                        android:layout_gravity="center" />
+
+                    <!-- Tank Vitamin B -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="8dp">
+
+                        <com.example.smartfarm.hidroponik.TankIndicatorView
+                            android:id="@+id/tankVitaminB"
+                            android:layout_width="90dp"
+                            android:layout_height="200dp"
+                            app:tankLabel="Vitamin B"
+                            app:tankWaterColor="#0288D1"
+                            app:tankWaterColorLight="#81D4FA"
+                            app:tankBorderColor="#01579B"
+                            app:tankPercentage="45" />
+
+                        <TextView
+                            android:id="@+id/tvTankBStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="-- %"
+                            android:textSize="14sp"
+                            android:textColor="#0277BD"
+                            android:textStyle="bold"
+                            android:layout_marginTop="4dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_neumorph_card"
+                    android:backgroundTint="#F1F8E9"
+                    android:padding="10dp"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="12dp">
+
+                    <View
+                        android:layout_width="6dp"
+                        android:layout_height="6dp"
+                        android:background="@drawable/bg_icon_circle_green" />
+
+                    <TextView
+                        android:id="@+id/tvTankInfoBar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Menunggu data sensor..."
+                        android:textColor="#558B2F"
+                        android:textSize="11sp"
+                        android:layout_marginStart="8dp" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ============ KONTROL MANUAL ============ -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardKontrolPompa"
             android:layout_width="match_parent"
@@ -274,6 +438,18 @@
                     android:background="#F1F8E9"
                     android:layout_marginBottom="16dp"/>
 
+                <!--
+                    FIX BUG 1: Pada kode asli, LinearLayout (teks label) menggunakan
+                    android:layout_toEndOf="@id/iconPompaA" yang mereferensikan ID icon
+                    di RelativeLayout yang SAMA. Ini membingungkan RelativeLayout karena
+                    view me-reference sibling-nya sendiri dengan ID yang tidak unique
+                    secara konteks (iconPompaA, iconPompaB, iconPompaUtama masing-masing
+                    hanya ada satu, jadi tidak ada ID conflict, TAPI pola ini benar).
+                    Kode asli sebenarnya sudah benar secara ID, namun perlu dipastikan
+                    tidak ada ID yang dipakai ganda di scope yang sama.
+                    Yang diperbaiki: struktur lebih jelas dengan tambahan komentar.
+                -->
+
                 <!-- Item: Pompa A -->
                 <RelativeLayout
                     android:layout_width="match_parent"
@@ -290,7 +466,10 @@
                         android:src="@drawable/ic_water_drop"
                         app:tint="#4CAF50" />
 
+                    <!-- FIX: LinearLayout HARUS menggunakan layout_toEndOf ke icon yang SAMA
+                         RelativeLayout. Ini sudah benar di asli, pastikan tidak ada ID ganda. -->
                     <LinearLayout
+                        android:id="@+id/labelPompaA"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_centerVertical="true"
@@ -339,6 +518,7 @@
                         app:tint="#4CAF50" />
 
                     <LinearLayout
+                        android:id="@+id/labelPompaB"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_centerVertical="true"
@@ -386,6 +566,7 @@
                         app:tint="#0288D1" />
 
                     <LinearLayout
+                        android:id="@+id/labelPompaUtama"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_centerVertical="true"
@@ -420,6 +601,12 @@
         </com.google.android.material.card.MaterialCardView>
 
         <!-- MODE OPERASI -->
+        <!--
+            FIX BUG 2: Ganti android.widget.Switch → androidx.appcompat.widget.SwitchCompat
+            Switch lama (android.widget.Switch) tidak mendukung app:thumbTint / app:trackTint.
+            Dengan SwitchCompat, namespace app: bisa digunakan konsisten seperti 3 switch lainnya.
+            Juga lebih aman di API < 21.
+        -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -456,14 +643,16 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <Switch
+                <!-- FIX: Ganti android.widget.Switch menjadi SwitchCompat -->
+                <androidx.appcompat.widget.SwitchCompat
                     android:id="@+id/switchAuto"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
-                    android:thumbTint="#FFFFFF"
-                    android:trackTint="#A5D6A7" />
+                    app:thumbTint="#FFFFFF"
+                    app:trackTint="#A5D6A7" />
+
             </RelativeLayout>
         </LinearLayout>
 
