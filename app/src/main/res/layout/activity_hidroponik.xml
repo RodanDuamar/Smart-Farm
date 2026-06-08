@@ -199,6 +199,33 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
+                <!-- Warning: Pencampuran Nutrisi Gagal -->
+                <LinearLayout
+                    android:id="@+id/warningPencampuranGagal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_warning_banner_critical"
+                    android:padding="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/bg_icon_circle_red" />
+
+                    <TextView
+                        android:id="@+id/tvWarningPencampuranGagal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="Pencampuran nutrisi gagal! Pompa dimatikan."
+                        android:textColor="#C62828"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

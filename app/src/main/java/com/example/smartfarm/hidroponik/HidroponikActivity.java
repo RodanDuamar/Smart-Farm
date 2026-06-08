@@ -44,8 +44,8 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
 
     // --- WARNING NOTIFICATION BANNER ---
     private View cardWarningBanner;
-    private View warningVitaminA, warningVitaminB, warningTangkiKosong, warningPompaTidakAktif;
-    private TextView tvWarningVitaminA, tvWarningVitaminB, tvWarningTangkiKosong, tvWarningPompa;
+    private View warningVitaminA, warningVitaminB, warningTangkiKosong, warningPompaTidakAktif, warningPencampuranGagal;
+    private TextView tvWarningVitaminA, tvWarningVitaminB, tvWarningTangkiKosong, tvWarningPompa, tvWarningPencampuranGagal;
     private View btnDismissWarning;
     private boolean warningDismissedByUser = false;
 
@@ -117,6 +117,8 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
         tvWarningVitaminB      = findViewById(R.id.tvWarningVitaminB);
         tvWarningTangkiKosong  = findViewById(R.id.tvWarningTangkiKosong);
         tvWarningPompa         = findViewById(R.id.tvWarningPompa);
+        warningPencampuranGagal = findViewById(R.id.warningPencampuranGagal);
+        tvWarningPencampuranGagal = findViewById(R.id.tvWarningPencampuranGagal);
         btnDismissWarning      = findViewById(R.id.btnDismissWarning);
 
         // Dismiss button listener
@@ -216,7 +218,8 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
                 "nutrisi/status",
                 "nutrisi/stock/nut",
                 "nutrisi/stock/vita",
-                "nutrisi/stock/vitb"
+                "nutrisi/stock/vitb",
+                "nutrisi/mixing"
         };
     }
 
@@ -406,6 +409,46 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
                     }
                 }
 
+                // ========================================================
+                // 4. PARSING STATUS PENCAMPURAN NUTRISI
+                // ========================================================
+                if (json.has("mixing_failed")) {
+                    boolean mixingFailed = json.optBoolean("mixing_failed");
+
+                    if (mixingFailed) {
+                        // Tampilkan warning banner
+                        showWarningItem(warningPencampuranGagal, true);
+                        if (tvWarningPencampuranGagal != null) {
+                            String reason = json.optString("reason", "Penyebab tidak diketahui");
+                            tvWarningPencampuranGagal.setText("Pencampuran nutrisi gagal! Pompa dimatikan. (" + reason + ")");
+                        }
+
+                        // Kirim push notification
+                        NotificationHelper.sendWarningNotification(this,
+                                NotificationHelper.CHANNEL_HIDROPONIK,
+                                NotificationHelper.NOTIF_PENCAMPURAN_GAGAL,
+                                "\u26a0 Pencampuran Nutrisi Gagal",
+                                "Pencampuran nutrisi gagal! Semua pompa dimatikan untuk keamanan.",
+                                HidroponikActivity.class);
+
+                        // === MATIKAN SEMUA POMPA UNTUK KEAMANAN ===
+                        Log.w("MIXING_FAIL", "Pencampuran gagal! Mematikan semua pompa...");
+                        publishCommand("dosing1", false);
+                        publishCommand("dosing2", false);
+                        publishCommand("water_pump", false);
+
+                        // Update UI saklar pompa
+                        switchPompaA.setChecked(false);
+                        switchPompaB.setChecked(false);
+                        switchPompaAir.setChecked(false);
+
+                        Toast.makeText(this, "\u26a0 Pencampuran gagal! Pompa dimatikan.", Toast.LENGTH_LONG).show();
+                    } else {
+                        showWarningItem(warningPencampuranGagal, false);
+                        NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_PENCAMPURAN_GAGAL);
+                    }
+                }
+
             } catch (Exception e) {
                 Log.e("MQTT_PARSE_ERROR", "Gagal membaca struktur data dari alat: " + e.getMessage());
             }
@@ -443,7 +486,8 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
                 (warningVitaminA != null && warningVitaminA.getVisibility() == View.VISIBLE) ||
                 (warningVitaminB != null && warningVitaminB.getVisibility() == View.VISIBLE) ||
                 (warningTangkiKosong != null && warningTangkiKosong.getVisibility() == View.VISIBLE) ||
-                (warningPompaTidakAktif != null && warningPompaTidakAktif.getVisibility() == View.VISIBLE);
+                (warningPompaTidakAktif != null && warningPompaTidakAktif.getVisibility() == View.VISIBLE) ||
+                (warningPencampuranGagal != null && warningPencampuranGagal.getVisibility() == View.VISIBLE);
 
         if (hasAnyWarning && !warningDismissedByUser) {
             cardWarningBanner.setVisibility(View.VISIBLE);

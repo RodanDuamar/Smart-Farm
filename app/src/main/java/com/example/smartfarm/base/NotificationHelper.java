@@ -40,6 +40,7 @@ public class NotificationHelper {
     public static final int NOTIF_STOK_VITAMIN_B_RENDAH = 2006;
     public static final int NOTIF_TANGKI_NUTRISI_KOSONG = 2007;
     public static final int NOTIF_POMPA_TIDAK_AKTIF = 2008;
+    public static final int NOTIF_PENCAMPURAN_GAGAL = 2009;
 
     // Cooldown: minimal 60 detik antar notifikasi sejenis
     private static final long COOLDOWN_MS = 60_000;
