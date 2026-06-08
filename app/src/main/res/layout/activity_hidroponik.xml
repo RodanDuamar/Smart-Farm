@@ -393,6 +393,262 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- ============ CARD: KAPASITAS TANKI NUTRISI UTAMA ============ -->
+        <!--
+            Card TERPISAH dari Vitamin A/B.
+            Menggunakan skema warna Teal (#00897B) agar mudah dibedakan dari:
+              - Vitamin A (Hijau #43A047)
+              - Vitamin B (Biru #0288D1)
+            ID baru yang perlu di-bind di Fragment/Activity:
+              - tankNutrisiUtama        → TankIndicatorView
+              - tvTankNutrisiUtamaStatus → TextView persentase di bawah tangki
+              - tvTankNutrisiInfoBar    → TextView info bar bawah
+        -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardTankNutrisiUtama"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#FFFFFF"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="3dp"
+            app:strokeColor="#B2DFDB"
+            app:strokeWidth="1.5dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- Header Card -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="4dp">
+
+                    <ImageView
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="@drawable/bg_icon_circle_green"
+                        android:backgroundTint="#E0F2F1"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_flask"
+                        app:tint="#00695C" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Kapasitas Tanki Nutrisi Utama"
+                            android:textSize="15sp"
+                            android:textColor="#004D40"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Larutan Nutrisi Hidroponik"
+                            android:textSize="11sp"
+                            android:textColor="#9E9E9E" />
+                    </LinearLayout>
+
+                    <!-- Badge persentase di pojok kanan header -->
+                    <TextView
+                        android:id="@+id/tvTankNutrisiUtamaBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_neumorph_card"
+                        android:backgroundTint="#E0F2F1"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="4dp"
+                        android:text="-- %"
+                        android:textColor="#00695C"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#E0F2F1"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Tangki Tunggal — ditampilkan di tengah dengan sisi kiri berisi info -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:baselineAligned="false">
+
+                    <!-- Kolom Kiri: Info Volume & Status -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:padding="8dp"
+                        android:gravity="start">
+
+                        <!-- Indikator Volume -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Volume Tersedia"
+                            android:textSize="11sp"
+                            android:textColor="#80BBC0B8"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:id="@+id/tvTankNutrisiVolume"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="-- L"
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:textColor="#00695C" />
+
+                        <!-- Divider kecil -->
+                        <View
+                            android:layout_width="40dp"
+                            android:layout_height="2dp"
+                            android:background="#4DB6AC"
+                            android:layout_marginTop="8dp"
+                            android:layout_marginBottom="8dp" />
+
+                        <!-- Status Kondisi -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Kondisi"
+                            android:textSize="11sp"
+                            android:textColor="#80BBC0B8"
+                            android:layout_marginBottom="4dp" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:background="@drawable/bg_icon_circle_green"
+                                android:backgroundTint="#00897B" />
+
+                            <TextView
+                                android:id="@+id/tvTankNutrisiUtamaStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="NORMAL"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="#00695C"
+                                android:layout_marginStart="6dp" />
+                        </LinearLayout>
+
+                        <!-- Terakhir diisi -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Pengisian Terakhir"
+                            android:textSize="11sp"
+                            android:textColor="#80BBC0B8"
+                            android:layout_marginTop="12dp"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:id="@+id/tvTankNutrisiLastFill"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--"
+                            android:textSize="11sp"
+                            android:textColor="#00695C"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Divider vertikal -->
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="220dp"
+                        android:background="#E0F2F1"
+                        android:layout_gravity="center" />
+
+                    <!-- Kolom Kanan: TankIndicatorView Tangki Utama -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="8dp">
+
+                        <com.example.smartfarm.hidroponik.TankIndicatorView
+                            android:id="@+id/tankNutrisiUtama"
+                            android:layout_width="100dp"
+                            android:layout_height="230dp"
+                            app:tankLabel="Utama"
+                            app:tankWaterColor="#00897B"
+                            app:tankWaterColorLight="#4DB6AC"
+                            app:tankBorderColor="#004D40"
+                            app:tankPercentage="70" />
+
+                        <TextView
+                            android:id="@+id/tvTankNutrisiUtamaPercent"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="-- %"
+                            android:textSize="14sp"
+                            android:textColor="#00695C"
+                            android:textStyle="bold"
+                            android:layout_marginTop="6dp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Info Bar Bawah -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_neumorph_card"
+                    android:backgroundTint="#E0F2F1"
+                    android:padding="10dp"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="12dp">
+
+                    <View
+                        android:layout_width="6dp"
+                        android:layout_height="6dp"
+                        android:background="@drawable/bg_icon_circle_green"
+                        android:backgroundTint="#00897B" />
+
+                    <TextView
+                        android:id="@+id/tvTankNutrisiInfoBar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Menunggu data sensor..."
+                        android:textColor="#00695C"
+                        android:textSize="11sp"
+                        android:layout_marginStart="8dp" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+        <!-- ============ END CARD: KAPASITAS TANKI NUTRISI UTAMA ============ -->
+
         <!-- ============ KONTROL MANUAL ============ -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardKontrolPompa"
@@ -438,18 +694,6 @@
                     android:background="#F1F8E9"
                     android:layout_marginBottom="16dp"/>
 
-                <!--
-                    FIX BUG 1: Pada kode asli, LinearLayout (teks label) menggunakan
-                    android:layout_toEndOf="@id/iconPompaA" yang mereferensikan ID icon
-                    di RelativeLayout yang SAMA. Ini membingungkan RelativeLayout karena
-                    view me-reference sibling-nya sendiri dengan ID yang tidak unique
-                    secara konteks (iconPompaA, iconPompaB, iconPompaUtama masing-masing
-                    hanya ada satu, jadi tidak ada ID conflict, TAPI pola ini benar).
-                    Kode asli sebenarnya sudah benar secara ID, namun perlu dipastikan
-                    tidak ada ID yang dipakai ganda di scope yang sama.
-                    Yang diperbaiki: struktur lebih jelas dengan tambahan komentar.
-                -->
-
                 <!-- Item: Pompa A -->
                 <RelativeLayout
                     android:layout_width="match_parent"
@@ -466,8 +710,6 @@
                         android:src="@drawable/ic_water_drop"
                         app:tint="#4CAF50" />
 
-                    <!-- FIX: LinearLayout HARUS menggunakan layout_toEndOf ke icon yang SAMA
-                         RelativeLayout. Ini sudah benar di asli, pastikan tidak ada ID ganda. -->
                     <LinearLayout
                         android:id="@+id/labelPompaA"
                         android:layout_width="wrap_content"
@@ -601,12 +843,6 @@
         </com.google.android.material.card.MaterialCardView>
 
         <!-- MODE OPERASI -->
-        <!--
-            FIX BUG 2: Ganti android.widget.Switch → androidx.appcompat.widget.SwitchCompat
-            Switch lama (android.widget.Switch) tidak mendukung app:thumbTint / app:trackTint.
-            Dengan SwitchCompat, namespace app: bisa digunakan konsisten seperti 3 switch lainnya.
-            Juga lebih aman di API < 21.
-        -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -643,7 +879,6 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <!-- FIX: Ganti android.widget.Switch menjadi SwitchCompat -->
                 <androidx.appcompat.widget.SwitchCompat
                     android:id="@+id/switchAuto"
                     android:layout_width="wrap_content"

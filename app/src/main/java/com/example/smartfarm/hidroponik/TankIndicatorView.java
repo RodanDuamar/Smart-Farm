@@ -13,7 +13,7 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 
-import com.example.smartfarm.R; // Pastikan R ini merujuk ke package aplikasi Anda
+import com.example.smartfarm.R;
 
 public class TankIndicatorView extends View {
 
@@ -59,7 +59,7 @@ public class TankIndicatorView extends View {
         textPaint.setTypeface(Typeface.DEFAULT_BOLD);
 
         textBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        textBgPaint.setColor(Color.parseColor("#66000000")); // Background semi-transparan untuk teks %
+        textBgPaint.setColor(Color.parseColor("#66000000"));
         textBgPaint.setStyle(Paint.Style.FILL);
 
         path = new Path();
@@ -85,15 +85,14 @@ public class TankIndicatorView extends View {
 
         float strokeWidth = borderPaint.getStrokeWidth();
         float inset = strokeWidth / 2;
-        
-        // Sesuaikan ukuran dengan stroke width agar tidak terpotong (clipped) di tepi
+
         float w = getWidth() - strokeWidth;
         float h = getHeight() - strokeWidth;
-        
+
         canvas.save();
         canvas.translate(inset, inset);
 
-        float ovalHeight = h * 0.08f; // Efek 3D kelengkungan tabung
+        float ovalHeight = h * 0.08f;
 
         borderPaint.setColor(tankBorderColor);
         waterPaint.setColor(tankWaterColor);
@@ -107,7 +106,6 @@ public class TankIndicatorView extends View {
             path.moveTo(0f, h - ovalHeight);
             path.lineTo(0f, waterLevelHeight);
 
-            // Membuat permukaan air sedikit bergelombang static di preview
             path.quadTo(w / 4f, waterLevelHeight - 10f, w / 2f, waterLevelHeight);
             path.quadTo(3f * w / 4f, waterLevelHeight + 10f, w, waterLevelHeight);
 
@@ -129,12 +127,9 @@ public class TankIndicatorView extends View {
         RectF topOval = new RectF(0f, 0f, w, ovalHeight * 2);
         RectF bottomOval = new RectF(0f, h - (ovalHeight * 2), w, h);
 
-        // Garis dinding kiri & kanan serta lengkungan bawah
         canvas.drawArc(bottomOval, 0f, 180f, false, borderPaint);
         canvas.drawLine(0f, ovalHeight, 0f, h - ovalHeight, borderPaint);
         canvas.drawLine(w, ovalHeight, w, h - ovalHeight, borderPaint);
-
-        // Lingkaran atas tanki terbuka
         canvas.drawOval(topOval, borderPaint);
 
         // 3. Gambar Teks Persentase di Tengah-tengah
@@ -143,10 +138,13 @@ public class TankIndicatorView extends View {
         float textX = w / 2;
         float textY = (h / 2) - ((textPaint.descent() + textPaint.ascent()) / 2);
 
-        // Background box agar teks persentase mudah dibaca
-        RectF bgRect = new RectF(textX - (textWidth / 2) - 12f, textY + textPaint.ascent() - 8f, textX + (textWidth / 2) + 12f, textY + textPaint.descent() + 8f);
+        RectF bgRect = new RectF(
+                textX - (textWidth / 2) - 12f,
+                textY + textPaint.ascent() - 8f,
+                textX + (textWidth / 2) + 12f,
+                textY + textPaint.descent() + 8f
+        );
         canvas.drawRoundRect(bgRect, 8f, 8f, textBgPaint);
-
         canvas.drawText(text, textX, textY, textPaint);
 
         // 4. Gambar Label Tanki (jika ada)
@@ -156,15 +154,43 @@ public class TankIndicatorView extends View {
             labelPaint.setTextAlign(Paint.Align.CENTER);
             labelPaint.setTextSize(24f);
             labelPaint.setTypeface(Typeface.DEFAULT_BOLD);
-            // Gambar di bagian bawah tabung, sedikit di atas garis lengkung bawah
             canvas.drawText(tankLabel, w / 2, h - (ovalHeight * 2.5f), labelPaint);
         }
 
         canvas.restore();
     }
 
+    /**
+     * Set persentase secara langsung tanpa animasi.
+     */
     public void setPercentage(int percentage) {
         this.tankPercentage = Math.max(0, Math.min(percentage, 100));
         invalidate();
+    }
+
+    /**
+     * Dapatkan nilai persentase saat ini.
+     */
+    public int getPercentage() {
+        return tankPercentage;
+    }
+
+    /**
+     * Set persentase dengan animasi smooth.
+     * Memanfaatkan ValueAnimator & LinearInterpolator yang sudah diimpor.
+     *
+     * @param percentage Target persentase (0–100)
+     * @param durationMs Durasi animasi dalam milidetik (contoh: 800)
+     */
+    public void setPercentageAnimated(int percentage, int durationMs) {
+        int target = Math.max(0, Math.min(percentage, 100));
+        ValueAnimator animator = ValueAnimator.ofInt(this.tankPercentage, target);
+        animator.setDuration(durationMs);
+        animator.setInterpolator(new LinearInterpolator());
+        animator.addUpdateListener(animation -> {
+            tankPercentage = (int) animation.getAnimatedValue();
+            invalidate();
+        });
+        animator.start();
     }
 }
