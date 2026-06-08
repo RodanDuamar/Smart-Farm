@@ -42,6 +42,13 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
     private TextView tvTankNutrisiUtamaPercent, tvTankNutrisiUtamaStatus, tvTankNutrisiVolume;
     private TextView tvTankAStatus, tvTankBStatus;
 
+    // --- WARNING NOTIFICATION BANNER ---
+    private View cardWarningBanner;
+    private View warningVitaminA, warningVitaminB, warningTangkiKosong, warningPompaTidakAktif;
+    private TextView tvWarningVitaminA, tvWarningVitaminB, tvWarningTangkiKosong, tvWarningPompa;
+    private View btnDismissWarning;
+    private boolean warningDismissedByUser = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -99,6 +106,26 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
         tvTankNutrisiUtamaPercent = findViewById(R.id.tvTankNutrisiUtamaPercent);
         tvTankNutrisiUtamaStatus  = findViewById(R.id.tvTankNutrisiUtamaStatus);
         tvTankNutrisiVolume       = findViewById(R.id.tvTankNutrisiVolume);
+
+        // Warning Banner Components
+        cardWarningBanner      = findViewById(R.id.cardWarningBanner);
+        warningVitaminA        = findViewById(R.id.warningVitaminA);
+        warningVitaminB        = findViewById(R.id.warningVitaminB);
+        warningTangkiKosong    = findViewById(R.id.warningTangkiKosong);
+        warningPompaTidakAktif = findViewById(R.id.warningPompaTidakAktif);
+        tvWarningVitaminA      = findViewById(R.id.tvWarningVitaminA);
+        tvWarningVitaminB      = findViewById(R.id.tvWarningVitaminB);
+        tvWarningTangkiKosong  = findViewById(R.id.tvWarningTangkiKosong);
+        tvWarningPompa         = findViewById(R.id.tvWarningPompa);
+        btnDismissWarning      = findViewById(R.id.btnDismissWarning);
+
+        // Dismiss button listener
+        if (btnDismissWarning != null) {
+            btnDismissWarning.setOnClickListener(v -> {
+                warningDismissedByUser = true;
+                if (cardWarningBanner != null) cardWarningBanner.setVisibility(View.GONE);
+            });
+        }
     }
 
     private void setupControlListeners() {
@@ -225,13 +252,64 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
                                 tvTankNutrisiVolume.setText(String.format(Locale.getDefault(), "%.1f cm", cm));
                             }
 
+                            // === WARNING: Tangki Nutrisi Utama Kosong (<=10%) ===
+                            if (stockPercent <= 10) {
+                                showWarningItem(warningTangkiKosong, true);
+                                if (tvWarningTangkiKosong != null) {
+                                    tvWarningTangkiKosong.setText("Tangki nutrisi utama kosong! (" + stockPercent + "%)");
+                                }
+                                NotificationHelper.sendWarningNotification(this,
+                                        NotificationHelper.CHANNEL_HIDROPONIK,
+                                        NotificationHelper.NOTIF_TANGKI_NUTRISI_KOSONG,
+                                        "⚠ Tangki Nutrisi Kosong",
+                                        "Tangki nutrisi utama hampir kosong! Level: " + stockPercent + "%",
+                                        HidroponikActivity.class);
+                            } else {
+                                showWarningItem(warningTangkiKosong, false);
+                                NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_TANGKI_NUTRISI_KOSONG);
+                            }
+
                         } else if (topic.equals("nutrisi/stock/vita")) {
                             if (tankVitaminA != null) tankVitaminA.setPercentageAnimated(stockPercent, 800);
                             if (tvTankAStatus != null) tvTankAStatus.setText(stockPercent + " %");
 
+                            // === WARNING: Stok Vitamin A Hampir Habis (<=20%) ===
+                            if (stockPercent <= 20) {
+                                showWarningItem(warningVitaminA, true);
+                                if (tvWarningVitaminA != null) {
+                                    tvWarningVitaminA.setText("Stok Vitamin A hampir habis! (" + stockPercent + "%)");
+                                }
+                                NotificationHelper.sendWarningNotification(this,
+                                        NotificationHelper.CHANNEL_HIDROPONIK,
+                                        NotificationHelper.NOTIF_STOK_VITAMIN_A_RENDAH,
+                                        "⚠ Stok Vitamin A Rendah",
+                                        "Stok Vitamin A hampir habis! Level: " + stockPercent + "%",
+                                        HidroponikActivity.class);
+                            } else {
+                                showWarningItem(warningVitaminA, false);
+                                NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_STOK_VITAMIN_A_RENDAH);
+                            }
+
                         } else if (topic.equals("nutrisi/stock/vitb")) {
                             if (tankVitaminB != null) tankVitaminB.setPercentageAnimated(stockPercent, 800);
                             if (tvTankBStatus != null) tvTankBStatus.setText(stockPercent + " %");
+
+                            // === WARNING: Stok Vitamin B Hampir Habis (<=20%) ===
+                            if (stockPercent <= 20) {
+                                showWarningItem(warningVitaminB, true);
+                                if (tvWarningVitaminB != null) {
+                                    tvWarningVitaminB.setText("Stok Vitamin B hampir habis! (" + stockPercent + "%)");
+                                }
+                                NotificationHelper.sendWarningNotification(this,
+                                        NotificationHelper.CHANNEL_HIDROPONIK,
+                                        NotificationHelper.NOTIF_STOK_VITAMIN_B_RENDAH,
+                                        "⚠ Stok Vitamin B Rendah",
+                                        "Stok Vitamin B hampir habis! Level: " + stockPercent + "%",
+                                        HidroponikActivity.class);
+                            } else {
+                                showWarningItem(warningVitaminB, false);
+                                NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_STOK_VITAMIN_B_RENDAH);
+                            }
                         }
                     }
                     return; // Mengakhiri eksekusi karena ini pesan data tangki
@@ -304,11 +382,74 @@ public class HidroponikActivity extends BaseSmartFarmActivity {
 
                 if (json.has("dosing1")) switchPompaA.setChecked(json.optBoolean("dosing1"));
                 if (json.has("dosing2")) switchPompaB.setChecked(json.optBoolean("dosing2"));
-                if (json.has("water_pump")) switchPompaAir.setChecked(json.optBoolean("water_pump"));
+                if (json.has("water_pump")) {
+                    boolean pumpActive = json.optBoolean("water_pump");
+                    switchPompaAir.setChecked(pumpActive);
+
+                    // === WARNING: Pompa Utama Tidak Aktif ===
+                    // Hanya tampilkan warning jika dalam mode OTOMATIS dan pompa mati
+                    boolean isAutoMode = switchAuto.isChecked();
+                    if (!pumpActive && isAutoMode) {
+                        showWarningItem(warningPompaTidakAktif, true);
+                        if (tvWarningPompa != null) {
+                            tvWarningPompa.setText("Pompa air utama tidak aktif dalam mode otomatis!");
+                        }
+                        NotificationHelper.sendWarningNotification(this,
+                                NotificationHelper.CHANNEL_HIDROPONIK,
+                                NotificationHelper.NOTIF_POMPA_TIDAK_AKTIF,
+                                "⚠ Pompa Tidak Aktif",
+                                "Pompa air utama tidak aktif saat mode otomatis!",
+                                HidroponikActivity.class);
+                    } else {
+                        showWarningItem(warningPompaTidakAktif, false);
+                        NotificationHelper.cancelNotification(this, NotificationHelper.NOTIF_POMPA_TIDAK_AKTIF);
+                    }
+                }
 
             } catch (Exception e) {
                 Log.e("MQTT_PARSE_ERROR", "Gagal membaca struktur data dari alat: " + e.getMessage());
             }
         });
+    }
+
+    // ========================================================
+    // WARNING BANNER HELPER METHODS
+    // ========================================================
+
+    /**
+     * Menampilkan atau menyembunyikan item warning individual,
+     * lalu memperbarui visibilitas card banner utama.
+     */
+    private void showWarningItem(View warningItem, boolean show) {
+        if (warningItem != null) {
+            warningItem.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+        // Jika ada warning baru yang muncul, reset dismiss state agar banner tampil lagi
+        if (show) {
+            warningDismissedByUser = false;
+        }
+        updateWarningBannerVisibility();
+    }
+
+    /**
+     * Memperbarui visibilitas card warning banner utama.
+     * Banner tampil jika ada minimal satu warning item yang visible
+     * DAN belum di-dismiss oleh user.
+     */
+    private void updateWarningBannerVisibility() {
+        if (cardWarningBanner == null) return;
+
+        boolean hasAnyWarning =
+                (warningVitaminA != null && warningVitaminA.getVisibility() == View.VISIBLE) ||
+                (warningVitaminB != null && warningVitaminB.getVisibility() == View.VISIBLE) ||
+                (warningTangkiKosong != null && warningTangkiKosong.getVisibility() == View.VISIBLE) ||
+                (warningPompaTidakAktif != null && warningPompaTidakAktif.getVisibility() == View.VISIBLE);
+
+        if (hasAnyWarning && !warningDismissedByUser) {
+            cardWarningBanner.setVisibility(View.VISIBLE);
+        } else if (!hasAnyWarning) {
+            cardWarningBanner.setVisibility(View.GONE);
+            warningDismissedByUser = false; // Reset dismiss state ketika semua warning hilang
+        }
     }
 }

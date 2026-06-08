@@ -36,6 +36,10 @@ public class NotificationHelper {
     public static final int NOTIF_PH_AIR_BASA = 2002;
     public static final int NOTIF_NUTRISI_KURANG = 2003;
     public static final int NOTIF_NUTRISI_BERLEBIH = 2004;
+    public static final int NOTIF_STOK_VITAMIN_A_RENDAH = 2005;
+    public static final int NOTIF_STOK_VITAMIN_B_RENDAH = 2006;
+    public static final int NOTIF_TANGKI_NUTRISI_KOSONG = 2007;
+    public static final int NOTIF_POMPA_TIDAK_AKTIF = 2008;
 
     // Cooldown: minimal 60 detik antar notifikasi sejenis
     private static final long COOLDOWN_MS = 60_000;
